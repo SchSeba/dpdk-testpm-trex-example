@@ -1,0 +1,51 @@
+FROM quay.io/centos/centos:8
+
+LABEL maintainer="Sebastian Scheinkman <sebassch@gmail.com>"
+
+ARG DPDK_VER=20.11.3
+ENV DPDK_VER ${DPDK_VER}
+ENV DPDK_DIR /usr/src/dpdk-stable-${DPDK_VER}
+ENV RTE_TARGET=x86_64-native-linuxapp-gcc
+ENV RTE_SDK=${DPDK_DIR}
+ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
+
+RUN dnf install dnf-plugins-core -y && dnf config-manager --set-enabled powertools && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
+# The second yum install is here to overcome versions mismatch between rpms
+RUN yum install -y wget python3\
+ numactl \
+ numactl-devel \
+ make \
+ logrotate \
+ ethtool \
+ patch \
+ which \
+ readline-devel \
+ iproute \
+ libibverbs \
+ lua \
+ git \
+ gcc \
+ expect \
+ sysstat \
+ perf \
+ htop \
+ net-tools \
+ libibverbs-devel && \
+ yum clean all
+
+RUN pip3 install meson ninja
+
+RUN cd /usr/src/ && wget http://fast.dpdk.org/rel/dpdk-${DPDK_VER}.tar.xz && tar -xpvf dpdk-${DPDK_VER}.tar.xz && rm dpdk-${DPDK_VER}.tar.xz && \
+    cd dpdk-stable-${DPDK_VER} && \
+    meson build && \
+    cd build  && \
+    meson configure -Denable_docs=false -Dbuildtype=debug && \
+    ninja && \
+    ninja install && \
+    echo "/usr/local/lib64" > /etc/ld.so.conf.d/dpdk.conf && \
+    ldconfig
+
+COPY scripts/testpmd.sh /usr/bin/
+
+WORKDIR /usr/src/dpdk-stable-${DPDK_VER}

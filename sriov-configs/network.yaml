@@ -1,0 +1,51 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.1.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-1"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-2
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.2.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-2"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_2
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-3
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.3.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-3"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_3
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-4
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.4.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-4"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_4

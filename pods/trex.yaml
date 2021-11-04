@@ -1,0 +1,197 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trex-info-for-config
+data:
+  SOCKET: "1"
+  PORT_BANDWIDTH_GB: "25"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trex-config-template
+data:
+  trex_cfg.yaml : |
+    - port_limit: 2
+      version: 2
+      interfaces: ["${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1}","${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_2}"]
+      port_bandwidth_gb: ${PORT_BANDWIDTH_GB}
+      port_info:
+        - ip: 1.1.1.1
+          default_gw: 2.2.2.2
+        - ip: 2.2.2.2
+          default_gw: 1.1.1.1
+      platform:
+        master_thread_id: $MASTER
+        latency_thread_id: $LATENCY
+        dual_if:
+          - socket: ${SOCKET}
+            threads: [${CPU}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trex-tests
+data:
+  test.py : |
+    from trex_stl_lib.api import *
+
+    from addr import *
+
+    # Wild local MACs
+    mac_localport0='50:00:00:00:00:01'
+    mac_localport1='50:00:00:00:00:02'
+
+    class STLS1(object):
+
+        def __init__ (self):
+            self.fsize  =64; # the size of the packet
+
+        def create_stream (self, direction = 0):
+
+            size = self.fsize - 4; # HW will add 4 bytes ethernet FCS
+            if direction == 0:
+              base_pkt =  Ether(dst=mac_telco0,src=mac_localport0)/IP(src="16.0.0.1",dst=ip_telco0)/UDP(dport=15,sport=1026)
+            else:
+              base_pkt =  Ether(dst=mac_telco1,src=mac_localport1)/IP(src="16.1.0.1",dst=ip_telco1)/UDP(dport=16,sport=1026)
+            #pad = max(0, size - len(base_pkt)) * 'x'
+            pad = (60 - len(base_pkt)) * 'x'
+
+            return STLStream(
+                packet =
+                        STLPktBuilder(
+                            pkt = base_pkt / pad
+                        ),
+                 mode = STLTXCont())
+
+        def create_stats_stream (self, rate_pps = 1000, pgid = 7, direction = 0):
+
+            size = self.fsize - 4; # HW will add 4 bytes ethernet FCS
+            if direction == 0:
+              base_pkt =  Ether(dst=mac_telco0,src=mac_localport0)/IP(src="17.0.0.1",dst=ip_telco0)/UDP(dport=15,sport=1026)
+            else:
+              base_pkt =  Ether(dst=mac_telco1,src=mac_localport1)/IP(src="17.1.0.1",dst=ip_telco1)/UDP(dport=16,sport=1026)
+            pad = max(0, size - len(base_pkt)) * 'x'
+
+            return STLStream(
+                packet =
+                        STLPktBuilder(
+                            pkt = base_pkt / pad
+                        ),
+                 mode = STLTXCont(pps = rate_pps),
+                 flow_stats = STLFlowLatencyStats(pg_id = pgid))
+                 #flow_stats = STLFlowStats(pg_id = pgid))
+
+        def get_streams (self, direction = 0, **kwargs):
+            # create multiple streams, one stream per core...
+            s = []
+            for i in range(2):
+                 s.append(self.create_stream(direction = direction))
+            #if direction == 0:
+            #    s.append(self.create_stats_stream(rate_pps=1000, pgid=10, direction = direction))
+            #else:
+            #    s.append(self.create_stats_stream(rate_pps=1000, pgid=11, direction = direction))
+
+            return s
+
+    # dynamic load - used for trex console or simulator
+    def register():
+        return STLS1()
+
+  addr.py: |
+    # wild second XL710 mac
+    mac_telco0 = '60:00:00:00:00:01'
+    # we don’t care of the IP in this phase
+    ip_telco0  = '10.0.0.1'
+    # wild first XL710 mac
+    mac_telco1 = '60:00:00:00:00:02'
+    ip_telco1 = '10.1.1.1'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "dpdk-network-1",
+       "mac": "50:00:00:00:00:01",
+       "namespace": "seba"
+      },
+      {
+       "name": "dpdk-network-2",
+       "mac": "50:00:00:00:00:02",
+       "namespace": "seba"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "true"
+  labels:
+    app: trex
+  name: trex
+  namespace: seba
+spec:
+  runtimeClassName: performance-performance
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - dpdk
+          topologyKey: kubernetes.io/hostname
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - /opt/scripts/create-trex-config.sh && ./t-rex-64 --no-ofed-check --no-hw-flow-stat -i
+      image: quay.io/schseba/trex:latest
+      imagePullPolicy: Always
+      name: trex
+      envFrom:
+        - configMapRef:
+            name: trex-info-for-config
+      resources:
+        limits:
+          cpu: "8"
+          hugepages-1Gi: 8Gi
+          memory: 1Gi
+        requests:
+          cpu: "8"
+          hugepages-1Gi: 8Gi
+          memory: 1Gi
+      securityContext:
+#        privileged: true
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW
+            - NET_ADMIN
+        runAsUser: 0
+      volumeMounts:
+        - name: trex-config-template
+          mountPath: /opt/templates/
+        - name: trex-tests
+          mountPath: /opt/tests/
+        - mountPath: /mnt/huge
+          name: hugepages
+        - name: modules
+          mountPath: /lib/modules
+  terminationGracePeriodSeconds: 5
+  volumes:
+    - name: modules
+      hostPath:
+        path: /lib/modules
+    - configMap:
+        name: trex-info-for-config
+      name: trex-info-for-config
+    - name: trex-config-template
+      configMap:
+        name: trex-config-template
+    - name: trex-tests
+      configMap:
+        name: trex-tests
+    - emptyDir:
+        medium: HugePages
+      name: hugepages

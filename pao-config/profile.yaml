@@ -1,0 +1,17 @@
+apiVersion: performance.openshift.io/v2
+kind: PerformanceProfile
+metadata:
+  name: performance
+spec:
+  cpu:
+    isolated: 21-51,73-103
+    reserved: 0-20,52-72
+  hugepages:
+    defaultHugepagesSize: 1G
+    pages:
+    - count: 32
+      size: 1G
+  numa:  
+    topologyPolicy: "single-numa-node"
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
