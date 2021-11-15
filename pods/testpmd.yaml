@@ -38,8 +38,7 @@ spec:
         - /bin/bash
         - -c
         - sleep INF
-#      image: quay.io/schseba/dpdk:latest
-      image: registry.redhat.io/openshift4/dpdk-base-rhel8:latest
+      image: quay.io/schseba/dpdk:rhel
       imagePullPolicy: Always
       name: dpdk
       resources:

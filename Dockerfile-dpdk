@@ -11,8 +11,8 @@ ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
 
 RUN dnf install dnf-plugins-core -y && dnf config-manager --set-enabled powertools && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
-# The second yum install is here to overcome versions mismatch between rpms
-RUN yum install -y wget python3\
+# The second dnf install is here to overcome versions mismatch between rpms
+RUN dnf install -y wget python3\
  numactl \
  numactl-devel \
  make \
@@ -32,7 +32,7 @@ RUN yum install -y wget python3\
  htop \
  net-tools \
  libibverbs-devel && \
- yum clean all
+ dnf clean all
 
 RUN pip3 install meson ninja
 
