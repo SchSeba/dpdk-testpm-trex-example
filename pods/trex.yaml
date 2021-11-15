@@ -85,7 +85,7 @@ data:
         def get_streams (self, direction = 0, **kwargs):
             # create multiple streams, one stream per core...
             s = []
-            for i in range(2):
+            for i in range(14):
                  s.append(self.create_stream(direction = direction))
             #if direction == 0:
             #    s.append(self.create_stats_stream(rate_pps=1000, pgid=10, direction = direction))
@@ -144,7 +144,7 @@ spec:
     - command:
         - /bin/bash
         - -c
-        - /opt/scripts/create-trex-config.sh && ./t-rex-64 --no-ofed-check --no-hw-flow-stat -i
+        - /opt/scripts/create-trex-config.sh && ./t-rex-64 --no-ofed-check --no-hw-flow-stat -i -c 14
       image: quay.io/schseba/trex:latest
       imagePullPolicy: Always
       name: trex
@@ -153,11 +153,11 @@ spec:
             name: trex-info-for-config
       resources:
         limits:
-          cpu: "8"
+          cpu: "16"
           hugepages-1Gi: 8Gi
           memory: 1Gi
         requests:
-          cpu: "8"
+          cpu: "16"
           hugepages-1Gi: 8Gi
           memory: 1Gi
       securityContext:

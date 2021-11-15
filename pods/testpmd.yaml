@@ -21,6 +21,7 @@ metadata:
   name: testpmd
   namespace: seba
 spec:
+#  hostNetwork: true
   runtimeClassName: performance-performance
   affinity:
     podAntiAffinity:
@@ -37,24 +38,28 @@ spec:
         - /bin/bash
         - -c
         - sleep INF
-      image: quay.io/schseba/dpdk:latest
+#      image: quay.io/schseba/dpdk:latest
+      image: registry.redhat.io/openshift4/dpdk-base-rhel8:latest
       imagePullPolicy: Always
       name: dpdk
       resources:
         limits:
-          cpu: "6"
-          hugepages-1Gi: 4Gi
-          memory: 1Gi
+          cpu: "16"
+          hugepages-1Gi: 8Gi
+          memory: 2Gi
         requests:
-          cpu: "6"
-          hugepages-1Gi: 4Gi
-          memory: 1Gi
+          cpu: "16"
+          hugepages-1Gi: 8Gi
+          memory: 2Gi
       securityContext:
+#        privileged: true
         capabilities:
           add:
             - IPC_LOCK
             - SYS_RESOURCE
             - NET_RAW
+            - NET_ADMIN
+            - MKNOD
         runAsUser: 0
       volumeMounts:
         - mountPath: /mnt/huge
