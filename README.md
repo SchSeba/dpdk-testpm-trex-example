@@ -311,7 +311,7 @@ TDB
 
 ## Start Trex
 
-Before starting Trex you need to update the [trex yaml](./pods/trex.yaml) in multiple places
+Before starting Trex you need to update the [trex yaml](pods/dpdk/trex.yaml) in multiple places
 
 * numa selection `SOCKET: "1"`
 * interface environments `interfaces: ["${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1}","${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_2}"]`

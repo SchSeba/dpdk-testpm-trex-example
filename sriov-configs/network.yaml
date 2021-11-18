@@ -49,3 +49,29 @@ spec:
   spoofChk: "on"
   trust: "on"
   resourceName: dpdk_nic_4
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.5.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-5"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: sriov_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-network-2
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.6.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-6"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: sriov_nic_2

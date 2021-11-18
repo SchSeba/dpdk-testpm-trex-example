@@ -8,6 +8,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
 
 COPY repo/* /etc/yum.repos.d/CentOS-Linux-BaseOS.repo
 
-RUN dnf install -y perf htop  net-tools && dnf clean all
+RUN dnf install -y perf htop net-tools && dnf clean all
 
 COPY scripts/testpmd.sh /usr/bin/
