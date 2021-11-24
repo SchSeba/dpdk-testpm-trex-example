@@ -6,6 +6,7 @@ metadata:
 spec:
   deviceType: vfio-pci
   linkType: eth
+  needVhostNet: true
   nicSelector:
     pfNames: ["ens3f0#0-4"]
   nodeSelector:
@@ -70,6 +71,7 @@ metadata:
 spec:
   deviceType: netdevice
   isRdma: true
+  needVhostNet: true
   linkType: eth
   nicSelector:
     rootDevices:

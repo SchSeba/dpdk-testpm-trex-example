@@ -6,19 +6,14 @@ metadata:
     k8s.v1.cni.cncf.io/networks: '[
       {
        "name": "dpdk-network-3",
-       "mac": "60:00:00:00:00:01",
-       "namespace": "seba"
-      },
-      {
-       "name": "dpdk-network-4",
-       "mac": "60:00:00:00:00:02",
+       "mac": "50:00:00:00:00:01",
        "namespace": "seba"
       }
     ]'
     cpu-load-balancing.crio.io: "true"
   labels:
     app: dpdk
-  name: testpmd
+  name: testpmd-client
   namespace: seba
 spec:
 #  hostNetwork: true
@@ -58,7 +53,6 @@ spec:
             - SYS_RESOURCE
             - NET_RAW
             - NET_ADMIN
-            - MKNOD
         runAsUser: 0
       volumeMounts:
         - mountPath: /mnt/huge
