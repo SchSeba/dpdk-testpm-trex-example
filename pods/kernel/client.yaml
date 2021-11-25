@@ -5,7 +5,7 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '[
       {
-       "name": "sriov-network-1",
+       "name": "sriov-network-2",
        "ips": ["10.0.5.41"],
        "namespace": "seba"
       }

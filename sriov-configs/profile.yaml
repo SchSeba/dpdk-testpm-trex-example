@@ -99,3 +99,69 @@ spec:
   numVfs: 5
   priority: 99
   resourceName: dpdk_nic_4
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: dpdk-nic-5
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci
+  linkType: eth
+  needVhostNet: true
+  nicSelector:
+    pfNames: ["ens1f0#0-4"]
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+  numVfs: 10
+  priority: 99
+  resourceName: dpdk_nic_5
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: sriov-nic-3
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  linkType: eth
+  nicSelector:
+    pfNames: ["ens1f0#5-9"]
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+  numVfs: 10
+  priority: 99
+  resourceName: sriov_nic_3
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: dpdk-nic-6
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci
+  linkType: eth
+  needVhostNet: true
+  nicSelector:
+    pfNames: ["ens1f1#0-4"]
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+  numVfs: 10
+  priority: 99
+  resourceName: dpdk_nic_6
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: sriov-nic-4
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  linkType: eth
+  nicSelector:
+    pfNames: ["ens1f1#5-9"]
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+  numVfs: 10
+  priority: 99
+  resourceName: sriov_nic_4

@@ -113,7 +113,7 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '[
       {
-       "name": "dpdk-network-1",
+       "name": "dpdk-network-1-vlan",
        "mac": "50:00:00:00:00:01",
        "namespace": "seba"
       },
