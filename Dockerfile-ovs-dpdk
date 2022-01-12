@@ -2,17 +2,20 @@ FROM quay.io/centos/centos:8
 
 LABEL maintainer="Sebastian Scheinkman <sebassch@gmail.com>"
 
-ARG DPDK_VER=20.11.3
+ARG DPDK_VER=20.11.1
 ENV DPDK_VER ${DPDK_VER}
 ENV DPDK_DIR /usr/src/dpdk-stable-${DPDK_VER}
 ENV RTE_TARGET=x86_64-native-linuxapp-gcc
 ENV RTE_SDK=${DPDK_DIR}
 ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
 
+ARG OVS_VER=2.16.2
+ENV OVS_VER ${OVS_VER}
+
 RUN dnf install dnf-plugins-core -y && dnf config-manager --set-enabled powertools && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
 # The second dnf install is here to overcome versions mismatch between rpms
-RUN dnf install -y wget python3\
+RUN dnf install -y wget python39.x86_64\
  numactl \
  numactl-devel \
  make \
@@ -34,13 +37,14 @@ RUN dnf install -y wget python3\
  libibverbs-devel \
  perf \
  htop \
- tcpdump && \
+ tcpdump \
+ diffutils && \
  dnf clean all
 
-RUN pip3 install meson ninja
+RUN pip3.9 install meson ninja pyelftools
 
 RUN cd /usr/src/ && wget http://fast.dpdk.org/rel/dpdk-${DPDK_VER}.tar.xz && tar -xpvf dpdk-${DPDK_VER}.tar.xz && rm dpdk-${DPDK_VER}.tar.xz && \
-    cd dpdk-stable-${DPDK_VER} && \
+    cd ${DPDK_DIR} && \
     meson build && \
     cd build  && \
     meson configure -Denable_docs=false -Dbuildtype=debug && \
@@ -49,6 +53,13 @@ RUN cd /usr/src/ && wget http://fast.dpdk.org/rel/dpdk-${DPDK_VER}.tar.xz && tar
     echo "/usr/local/lib64" > /etc/ld.so.conf.d/dpdk.conf && \
     ldconfig
 
-COPY scripts/* /usr/bin/
 
-WORKDIR /usr/src/dpdk-stable-${DPDK_VER}
+RUN cd /opt/ && wget https://www.openvswitch.org/releases/openvswitch-${OVS_VER}.tar.gz && tar -xpvf openvswitch-${OVS_VER}.tar.gz && rm openvswitch-${OVS_VER}.tar.gz && \
+    cd openvswitch-${OVS_VER} && \
+    ./configure --with-dpdk=yes --prefix=/usr --localstatedir=/var --sysconfdir=/etc CFLAGS="-Ofast -msse4.2 -mpopcnt" && \
+    make && \
+    make install
+
+
+WORKDIR /opt/
+COPY scripts /opt/scripts
