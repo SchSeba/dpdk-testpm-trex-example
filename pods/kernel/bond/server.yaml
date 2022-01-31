@@ -1,0 +1,51 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "sriov-network-1-vlan-no-ipam",
+       "namespace": "seba"
+      },
+      {
+       "name": "sriov-network-2-no-ipam",
+       "namespace": "seba"
+      },
+      {
+       "name": "bond-balance-alb",
+       "ips": ["10.0.5.42"],
+       "namespace": "seba"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "true"
+  labels:
+    app: kernel-server
+  name: server
+  namespace: seba
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - kernel-client
+          topologyKey: kubernetes.io/hostname
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: registry.redhat.io/openshift4/cnf-tests-rhel8
+      imagePullPolicy: Always
+      name: kernel
+      securityContext:
+        capabilities:
+          add:
+            - NET_RAW
+            - NET_ADMIN
+        runAsUser: 0
+  terminationGracePeriodSeconds: 5

@@ -3,7 +3,6 @@ kind: ConfigMap
 metadata:
   name: trex-info-for-config
 data:
-  SOCKET: "1"
   PORT_BANDWIDTH_GB: "25"
 ---
 apiVersion: v1

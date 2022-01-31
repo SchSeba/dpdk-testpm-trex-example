@@ -16,5 +16,13 @@ do
 done
 CPU="${CPU:1}"
 echo $CPU
+
+NODE=`lscpu | grep ${MASTER} | awk '/node0/{print "0"}{print "1"}'`
+export SOCKET="0"
+if [[ ${NODE} -eq 1 ]]
+then
+export SOCKET="1"
+fi
+
 echo "Socket:" ${SOCKET}
 envsubst <  /opt/templates/trex_cfg.yaml > "/etc/trex_cfg.yaml"

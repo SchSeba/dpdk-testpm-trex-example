@@ -1,0 +1,115 @@
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: bond-active-backup
+  namespace: seba
+spec:
+  config: '{
+  "type": "bond",
+  "cniVersion": "0.3.1",
+  "name": "bond-net1",
+  "ifname": "bond0",
+  "mode": "active-backup",
+  "failOverMac": 0,
+  "linksInContainer": true,
+  "miimon": "100",
+  "links": [
+     {"name": "net1"},
+     {"name": "net2"}
+  ],
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.0.5.0/24",
+    "routes": [{
+      "dst": "0.0.0.0/0"
+    }],
+    "gateway": "10.0.5.1"
+  }
+}'
+# This request some configuration in the switch to have status ether-channel
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: bond-balance-xor
+  namespace: seba
+spec:
+  config: '{
+  "type": "bond",
+  "cniVersion": "0.3.1",
+  "name": "bond-net1",
+  "ifname": "bond0",
+  "mode": "balance-xor",
+  "linksInContainer": true,
+  "miimon": "100",
+  "links": [
+     {"name": "net1"},
+     {"name": "net2"}
+  ],
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.0.5.0/24",
+    "routes": [{
+      "dst": "0.0.0.0/0"
+    }],
+    "gateway": "10.0.5.1"
+  }
+}'
+# This one is not working as expected
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: bond-balance-tlb
+  namespace: seba
+spec:
+  config: '{
+  "type": "bond",
+  "cniVersion": "0.3.1",
+  "name": "bond-net1",
+  "ifname": "bond0",
+  "mode": "balance-tlb",
+  "failOverMac": 0,
+  "linksInContainer": true,
+  "miimon": "100",
+  "links": [
+     {"name": "net1"},
+     {"name": "net2"}
+  ],
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.0.5.0/24",
+    "routes": [{
+      "dst": "0.0.0.0/0"
+    }],
+    "gateway": "10.0.5.1"
+  }
+}'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: bond-balance-alb
+  namespace: seba
+spec:
+  config: '{
+  "type": "bond",
+  "cniVersion": "0.3.1",
+  "name": "bond-net1",
+  "ifname": "bond0",
+  "mode": "balance-alb",
+  "linksInContainer": true,
+  "miimon": "100",
+  "links": [
+     {"name": "net1"},
+     {"name": "net2"}
+  ],
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.0.5.0/24",
+    "routes": [{
+      "dst": "0.0.0.0/0"
+    }],
+    "gateway": "10.0.5.1"
+  }
+}'

@@ -155,3 +155,26 @@ spec:
   spoofChk: "on"
   trust: "on"
   resourceName: sriov_nic_4
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-network-1-vlan-no-ipam
+  namespace: openshift-sriov-network-operator
+spec:
+  networkNamespace: seba
+  spoofChk: "off"
+  trust: "on"
+  vlan: 2004
+  resourceName: sriov_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-network-2-no-ipam
+  namespace: openshift-sriov-network-operator
+spec:
+  networkNamespace: seba
+  spoofChk: "off"
+  trust: "on"
+  resourceName: sriov_nic_2
