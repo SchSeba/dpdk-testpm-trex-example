@@ -1,6 +1,6 @@
-FROM quay.io/centos/centos:8
+FROM quay.io/centos/centos:stream8
 
-ARG TREX_VERSION=2.87
+ARG TREX_VERSION=2.95
 ENV TREX_VERSION ${TREX_VERSION}
 
 # install requirements

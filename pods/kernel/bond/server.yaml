@@ -13,7 +13,7 @@ metadata:
        "namespace": "seba"
       },
       {
-       "name": "bond-balance-alb",
+       "name": "bond-balance-tlb",
        "ips": ["10.0.5.42"],
        "namespace": "seba"
       }
