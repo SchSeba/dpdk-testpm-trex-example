@@ -19,8 +19,8 @@ The following diagram shows the components of a traffic-testing environment:
 ## Running the validation
 For this stage of the development of the test environment, you must do the following:
 1. Build the TRex container image.
-2. Run the TRex config script.
-3. Deploy an OpenShift Container Platform cluster.
+2. Deploy an OpenShift Container Platform cluster.
+3. Create TRex configuration from template
 4. Define a TRex pod.
 
 ## Building the TRex container image
@@ -269,7 +269,6 @@ data:
     mac_telco1 = '60:00:00:00:00:02'
     ip_telco1 = '10.1.1.1'
 ---
----
 apiVersion: v1
 kind: Pod
 metadata:
@@ -433,7 +432,7 @@ Output Example:
 Then you can lunch TRex with the following command:
 
 ```
-/opt/scripts/create-trex-config.sh && ./t-rex-64 --no-ofed-check --no-hw-flow-stat -i -c 14
+./t-rex-64 --no-ofed-check --no-hw-flow-stat -i -c 14
 ```
 
 ## Test configuration
