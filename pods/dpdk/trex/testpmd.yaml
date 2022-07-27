@@ -5,23 +5,24 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '[
       {
-       "name": "dpdk-network-3",
+       "name": "dpdk-network-1",
        "mac": "60:00:00:00:00:01",
        "namespace": "seba"
       },
       {
-       "name": "dpdk-network-4",
+       "name": "dpdk-network-2",
        "mac": "60:00:00:00:00:02",
        "namespace": "seba"
       }
     ]'
-    cpu-load-balancing.crio.io: "true"
+    cpu-load-balancing.crio.io: "disable"
+    cpu-quota.crio.io: "disable"
+    irq-load-balancing.crio.io: "disable"
   labels:
     app: dpdk
   name: testpmd
   namespace: seba
 spec:
-#  hostNetwork: true
   runtimeClassName: performance-performance
   affinity:
     podAntiAffinity:
@@ -33,12 +34,14 @@ spec:
                 values:
                   - trex
           topologyKey: kubernetes.io/hostname
+  securityContext:
+    fsGroup: 1001
   containers:
     - command:
         - /bin/bash
         - -c
         - sleep INF
-      image: quay.io/schseba/dpdk:rhel
+      image: quay.io/schseba/dpdk:test
       imagePullPolicy: Always
       name: dpdk
       resources:
@@ -62,6 +65,22 @@ spec:
       volumeMounts:
         - mountPath: /mnt/huge
           name: hugepages
+    - command:
+      - /bin/bash
+      - -c
+      - sleep INF
+      image: quay.io/schseba/dpdk:test
+      imagePullPolicy: Always
+      name: test
+      securityContext:
+        privileged: true
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW
+            - NET_ADMIN
+        runAsUser: 0
   terminationGracePeriodSeconds: 5
   volumes:
     - emptyDir:

@@ -229,7 +229,9 @@ metadata:
        "namespace": "seba"
       }
     ]'
-    cpu-load-balancing.crio.io: "true"
+    cpu-load-balancing.crio.io: "disable"
+    cpu-quota.crio.io: "disable"
+    irq-load-balancing.crio.io: "disable"
   labels:
     app: trex
   name: trex
