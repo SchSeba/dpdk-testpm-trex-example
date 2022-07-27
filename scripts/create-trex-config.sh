@@ -17,7 +17,7 @@ done
 CPU="${CPU:1}"
 echo $CPU
 
-NODE=`lscpu | grep ${MASTER} | awk '/node0/{print "0"}{print "1"}'`
+NODE=`lscpu | grep ${MASTER}, | awk '/node0/{print "0"}{print "1"}'`
 export SOCKET="0"
 if [[ ${NODE}==1 ]]
 then

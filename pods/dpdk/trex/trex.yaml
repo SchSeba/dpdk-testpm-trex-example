@@ -13,7 +13,9 @@ data:
   trex_cfg.yaml : |
     - port_limit: 2
       version: 2
-      interfaces: ["${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1}","${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_2}"]
+      interfaces: 
+        - ${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1}
+        - ${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_2}
       port_bandwidth_gb: ${PORT_BANDWIDTH_GB}
       port_info:
         - ip: 10.10.10.2
