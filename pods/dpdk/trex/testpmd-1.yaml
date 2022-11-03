@@ -6,12 +6,12 @@ metadata:
     k8s.v1.cni.cncf.io/networks: '[
       {
        "name": "dpdk-network-1",
-       "mac": "60:00:00:00:00:01",
+       "mac": "60:00:00:00:00:03",
        "namespace": "seba"
       },
       {
-       "name": "dpdk-network-2",
-       "mac": "60:00:00:00:00:02",
+       "name": "dpdk-network-1",
+       "mac": "60:00:00:00:00:04",
        "namespace": "seba"
       }
     ]'
@@ -20,9 +20,10 @@ metadata:
     irq-load-balancing.crio.io: "disable"
   labels:
     app: dpdk
-  name: testpmd
+  name: testpmd-1
   namespace: seba
 spec:
+#  hostNetwork: true
   runtimeClassName: performance-performance
   affinity:
     podAntiAffinity:
@@ -34,8 +35,6 @@ spec:
                 values:
                   - trex
           topologyKey: kubernetes.io/hostname
-  securityContext:
-    fsGroup: 1001
   containers:
     - command:
         - /bin/bash
@@ -54,7 +53,6 @@ spec:
           hugepages-1Gi: 8Gi
           memory: 2Gi
       securityContext:
-#        privileged: true
         capabilities:
           add:
             - IPC_LOCK

@@ -3,7 +3,7 @@ kind: PerformanceProfile
 metadata:
   name: performance
 spec:
-  globallyDisableIrqLoadBalancing: true
+#  globallyDisableIrqLoadBalancing: true
   cpu:
     isolated: 21-51,73-103
     reserved: 0-20,52-72
@@ -12,7 +12,7 @@ spec:
     pages:
     - count: 32
       size: 1G
-  numa:  
+  numa:
     topologyPolicy: "single-numa-node"
   nodeSelector:
     node-role.kubernetes.io/worker-cnf: ""

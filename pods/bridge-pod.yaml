@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "bridge",
+       "namespace": "seba"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "true"
+  labels:
+    app: bridge
+  name: bridge-pod
+  namespace: seba
+spec:
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/schseba/toolbox:latest
+      imagePullPolicy: Always
+      name: kernel
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN
+        runAsUser: 1001
+        runAsGroup: 1001
+  terminationGracePeriodSeconds: 1

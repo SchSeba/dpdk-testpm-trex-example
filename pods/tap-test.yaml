@@ -6,24 +6,40 @@ metadata:
     k8s.v1.cni.cncf.io/networks: '[
       {
        "name": "dpdk-network-1",
-       "mac": "60:00:00:00:00:01",
+       "mac": "50:00:00:00:00:01",
        "namespace": "seba"
       },
       {
-       "name": "dpdk-network-2",
-       "mac": "60:00:00:00:00:02",
-       "namespace": "seba"
+       "name": "tap",
+       "namespace": "seba",
+       "interface": "ext0"
+      },
+      {
+       "name": "tap",
+       "namespace": "seba",
+       "interface": "ext1"
+      },
+      {
+       "name": "ipvlan-101",
+       "namespace": "seba",
+       "interface": "ext0.101"
+      },
+      {
+       "name": "ipvlan-102",
+       "namespace": "seba",
+       "interface": "ext1.102"
       }
     ]'
-    cpu-load-balancing.crio.io: "disable"
-    cpu-quota.crio.io: "disable"
-    irq-load-balancing.crio.io: "disable"
+    cpu-load-balancing.crio.io: "true"
   labels:
     app: dpdk
-  name: testpmd
+  name: toolbox
   namespace: seba
 spec:
+  #  hostNetwork: true
   runtimeClassName: performance-performance
+  securityContext:
+    fsGroup: 2002
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -34,14 +50,13 @@ spec:
                 values:
                   - trex
           topologyKey: kubernetes.io/hostname
-  securityContext:
-    fsGroup: 1001
   containers:
     - command:
         - /bin/bash
         - -c
         - sleep INF
-      image: quay.io/schseba/dpdk:test
+      image: quay.io/schseba/dpdk:rhel
+#      image: quay.io/schseba/toolbox:latest
       imagePullPolicy: Always
       name: dpdk
       resources:
@@ -54,18 +69,20 @@ spec:
           hugepages-1Gi: 8Gi
           memory: 2Gi
       securityContext:
-#        privileged: true
+        #        privileged: true
         capabilities:
           add:
             - IPC_LOCK
             - SYS_RESOURCE
-            - NET_RAW
+            - NET_RAW #for mlx only
             - NET_ADMIN
-        runAsUser: 0
+#        runAsUser: 0 #for root container
+        runAsUser: 1001
+        runAsGroup: 2001
       volumeMounts:
         - mountPath: /mnt/huge
           name: hugepages
-  terminationGracePeriodSeconds: 5
+  terminationGracePeriodSeconds: 2
   volumes:
     - emptyDir:
         medium: HugePages

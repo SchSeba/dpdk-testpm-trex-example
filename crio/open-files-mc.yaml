@@ -1,0 +1,25 @@
+#cat << EOF | base64 -w0
+#  [crio.runtime]
+#  default_ulimits = [
+#  "memlock=-1:-1"
+#]
+#EOF
+
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker-cnf
+  name: 02-worker-container-runtime
+spec:
+  config:
+    ignition:
+      version: 3.1.0
+    storage:
+      files:
+        - contents:
+            source: data:text/plain;charset=utf-8;base64,ICBbY3Jpby5ydW50aW1lXQogIGRlZmF1bHRfdWxpbWl0cyA9IFsKICAibWVtbG9jaz0tMTotMSIKXQo=
+          mode: 420
+          overwrite: true
+          path: /etc/crio/crio.conf.d/10-custom

@@ -219,12 +219,12 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '[
       {
-       "name": "dpdk-network-1-vlan",
+       "name": "dpdk-network-1",
        "mac": "50:00:00:00:00:01",
        "namespace": "seba"
       },
       {
-       "name": "dpdk-network-2",
+       "name": "dpdk-network-1",
        "mac": "50:00:00:00:00:02",
        "namespace": "seba"
       }
@@ -252,7 +252,8 @@ spec:
     - command:
         - /bin/bash
         - -c
-        - /opt/scripts/create-trex-config.sh && ./t-rex-64 --no-ofed-check --no-hw-flow-stat -i -c 14
+        - sleep INF
+        #- /opt/scripts/create-trex-config.sh && ./t-rex-64 --no-ofed-check --no-hw-flow-stat -i -c 14
       image: quay.io/schseba/trex:latest
       imagePullPolicy: Always
       name: trex

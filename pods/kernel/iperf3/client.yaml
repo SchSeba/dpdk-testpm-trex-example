@@ -7,6 +7,31 @@ metadata:
       {
        "name": "sriov-network-2",
        "ips": ["10.0.5.41"],
+       "mac": "60:00:00:00:00:01",
+       "namespace": "seba"
+      },
+      {
+       "name": "sriov-network-2",
+       "ips": ["10.0.5.42"],
+       "mac": "60:00:00:00:00:05",
+       "namespace": "seba"
+      },
+      {
+       "name": "sriov-network-2",
+       "ips": ["10.0.5.43"],
+       "mac": "60:00:00:00:00:03",
+       "namespace": "seba"
+      },
+      {
+       "name": "sriov-network-2",
+       "ips": ["10.0.5.44"],
+       "mac": "60:00:00:00:00:04",
+       "namespace": "seba"
+      },
+      {
+       "name": "sriov-network-2",
+       "ips": ["10.0.5.45"],
+       "mac": "60:00:00:00:00:06",
        "namespace": "seba"
       }
     ]'
@@ -16,6 +41,7 @@ metadata:
   name: client
   namespace: seba
 spec:
+  nodeName: cnfdt04.lab.eng.tlv2.redhat.com
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -31,7 +57,7 @@ spec:
         - /bin/bash
         - -c
         - sleep INF
-      image: registry.redhat.io/openshift4/cnf-tests-rhel8
+      image: quay.io/openshift-kni/cnf-tests:latest
       imagePullPolicy: Always
       name: kernel
       securityContext:
@@ -40,4 +66,4 @@ spec:
             - NET_RAW
             - NET_ADMIN
         runAsUser: 0
-  terminationGracePeriodSeconds: 5
+  terminationGracePeriodSeconds: 1

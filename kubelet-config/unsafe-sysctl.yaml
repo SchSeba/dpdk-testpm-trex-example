@@ -1,0 +1,20 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: KubeletConfig
+metadata:
+  name: custom-kubelet
+spec:
+  machineConfigPoolSelector:
+    matchLabels:
+      machineconfiguration.openshift.io/role: worker-cnf
+  kubeletConfig:
+    allowedUnsafeSysctls:
+      - "net.ipv6.conf.all.disable_ipv6"
+      - "net.ipv6.conf.default.disable_ipv6"
+      - "net.ipv6.conf.all.accept_ra"
+      - "net.ipv6.conf.default.accept_ra"
+      - "net.ipv6.conf.all.autoconf"
+      - "net.ipv6.conf.default.autoconf"
+      - "net.ipv4.conf.all.arp_accept"
+      - "net.ipv4.conf.default.arp_accept"
+      - "net.ipv4.conf.all.rp_filter"
+      - "net.ipv4.conf.default.rp_filter"
