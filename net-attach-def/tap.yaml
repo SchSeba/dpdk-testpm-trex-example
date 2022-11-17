@@ -50,7 +50,20 @@ spec:
 					"address": "10.10.0.1/24"
 				}]
 			}
-		}
+		},
+		{
+  			"type": "tuning",
+  			"capabilities": {
+  				"mac": true
+  			},
+  			"sysctl": {
+  				"net.ipv6.conf.IFNAME.disable_ipv6": "1",
+  				"net.ipv6.conf.IFNAME.accept_ra": "1",
+  				"net.ipv6.conf.IFNAME.autoconf": "1",
+  				"net.ipv4.conf.IFNAME.arp_accept": "1",
+  				"net.ipv4.conf.IFNAME.rp_filter": "1"
+  			}
+  		}
 	]
 }'
 ---
@@ -91,17 +104,3 @@ spec:
   		}
 	]
 }'
-
-  #		{
-  #			"type": "tuning",
-  #			"capabilities": {
-  #				"mac": true
-  #			},
-  #			"sysctl": {
-  #				"net.ipv6.conf.IFNAME.disable_ipv6": "1",
-  #				"net.ipv6.conf.IFNAME.accept_ra": "1",
-  #				"net.ipv6.conf.IFNAME.autoconf": "1",
-  #				"net.ipv4.conf.IFNAME.arp_accept": "1",
-  #				"net.ipv4.conf.IFNAME.rp_filter": "1"
-  #			}
-  #		}

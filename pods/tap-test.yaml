@@ -12,7 +12,8 @@ metadata:
       {
        "name": "tap",
        "namespace": "seba",
-       "interface": "ext0"
+       "interface": "ext0",
+       "mac": "50:00:00:00:00:10"
       },
       {
        "name": "tap",
@@ -55,7 +56,8 @@ spec:
         - /bin/bash
         - -c
         - sleep INF
-      image: quay.io/schseba/dpdk:rhel
+#      image: quay.io/schseba/dpdk:rhel
+      image: quay.io/schseba/dpdk:rhel-original
 #      image: quay.io/schseba/toolbox:latest
       imagePullPolicy: Always
       name: dpdk
@@ -75,7 +77,7 @@ spec:
             - IPC_LOCK
             - SYS_RESOURCE
             - NET_RAW #for mlx only
-            - NET_ADMIN
+#            - NET_ADMIN
 #        runAsUser: 0 #for root container
         runAsUser: 1001
         runAsGroup: 2001

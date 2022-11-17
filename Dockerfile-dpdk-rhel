@@ -5,9 +5,9 @@ LABEL maintainer="Sebastian Scheinkman <sebassch@gmail.com>"
 USER 0
 
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all
+RUN dnf install -y net-tools iproute bind-utils bridge-utils && dnf clean all
 
-COPY repo/* /etc/yum.repos.d/
-
-RUN dnf install -y perf htop net-tools tcpdump && dnf clean all
+RUN setcap CAP_NET_ADMIN,CAP_NET_RAW=+ep /usr/sbin/ip && \
+    setcap CAP_NET_ADMIN,CAP_NET_RAW=+ep /usr/sbin/route
 
 COPY scripts/* /usr/bin/
