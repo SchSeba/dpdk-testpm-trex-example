@@ -41,7 +41,7 @@ metadata:
   name: client1
   namespace: seba
 spec:
-  nodeName: cnfdt04.lab.eng.tlv2.redhat.com
+  nodeName: cnfdt4.lab.eng.tlv2.redhat.com
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:

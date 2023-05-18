@@ -1,6 +1,6 @@
-FROM quay.io/centos/centos:stream8
+FROM quay.io/centos/centos:stream9
 
-RUN dnf update -y && dnf install -y epel-release && dnf install -y htop net-tools tcpdump iproute bind-utils bridge-utils procps-ng strace && dnf clean all
+RUN dnf update -y && dnf install -y epel-release && dnf install -y iputils htop net-tools tcpdump iproute bind-utils bridge-utils procps-ng strace iperf3 perf && dnf clean all
 
 RUN setcap CAP_NET_ADMIN,CAP_NET_RAW=+ep /usr/sbin/ip \
     && setcap CAP_NET_ADMIN=+ep /usr/sbin/route

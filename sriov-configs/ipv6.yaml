@@ -1,0 +1,27 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: sriov-nic
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  nicSelector:
+    pfNames: ["ens1f0"]
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+  numVfs: 10
+  priority: 99
+  resourceName: sriov_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-network
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "2001:dc2:b03:30::/64"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-1"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: sriov_nic_1

@@ -1,0 +1,36 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker-cnf
+  name: 02-worker-ib-core-exclusive
+spec:
+  config:
+    ignition:
+      version: 3.1.0
+    storage:
+      files:
+        - contents:
+            source: data:text/plain;charset=utf-8;base64,b3B0aW9ucyBpYl9jb3JlIG5ldG5zX21vZGU9MAo=
+          mode: 420
+          overwrite: true
+          path: /etc/modprobe.d/ib_core.conf
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Description=RDMA exclusive mode
+            Before=kubelet.service crio.service node-valid-hostname.service
+            
+            [Service]
+            # Need oneshot to delay kubelet
+            Type=oneshot
+            ExecStart=/usr/bin/bash -c "rdma system set netns exclusive"
+            StandardOutput=journal+console
+            StandardError=journal+console
+
+            [Install]
+            WantedBy=network-online.target
+          enabled: true
+          name: "rdma.service"

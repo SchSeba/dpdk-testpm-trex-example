@@ -1,0 +1,33 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "macvlan",
+       "namespace": "seba"
+      }
+    ]'
+  labels:
+    app: dpdk
+  name: toolbox
+  namespace: seba
+spec:
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/schseba/toolbox:latest
+      imagePullPolicy: Always
+      name: dpdk
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW #for mlx only
+            - NET_ADMIN
+        runAsUser: 0 #for root container
+  terminationGracePeriodSeconds: 2

@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: seba
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[ { "name": "sriov-network", "interface": "mh0", "ips": ["2001:dc2:b03:30::3/64"]}]'
+        #cpu-load-balancing.crio.io: "disable"
+        cpu-quota.crio.io: "disable"
+        #irq-load-balancing.crio.io: "disable"
+      labels:
+        app: client
+    spec:
+      runtimeClass: performance-performance
+      containers:
+        - command:
+            - /usr/bin/bash
+            - -c
+            - /usr/bin/tail -f /dev/null
+          image: quay.io/schseba/toolbox:latest
+          imagePullPolicy: Always
+          name: server
+          resources:
+            limits:
+              cpu: "8"
+              memory: 1Gi
+            requests:
+              cpu: "8"
+              memory: 1Gi
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+      nodeName: cnfdt5.lab.eng.tlv2.redhat.com
+      restartPolicy: Always
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 5

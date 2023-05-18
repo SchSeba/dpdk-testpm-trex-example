@@ -1,0 +1,20 @@
+apiVersion: tuned.openshift.io/v1
+kind: Tuned
+metadata:
+  name: configuration-hotfixes
+  namespace: openshift-cluster-node-tuning-operator
+spec:
+  profile:
+    - data: |
+        [main]
+        summary=Configuration changes profile inherited from performance created tuned
+        
+        include=openshift-node-performance-performance
+        [bootloader]
+        cmdline_realtime=-nohz_full=1,3-51,53,55-103
+      name: openshift-configuration-hotfixes
+  recommend:
+    - machineConfigLabels:
+        machineconfiguration.openshift.io/role: worker-cnf
+      priority: 19
+      profile: openshift-configuration-hotfixes

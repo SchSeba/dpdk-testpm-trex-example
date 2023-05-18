@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rdma-cni
+  namespace: openshift-sriov-network-operator
+  labels:
+    tier: node
+    app: rdma-cni
+    name: rdma-cni
+spec:
+  selector:
+    matchLabels:
+      name: rdma-cni
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        tier: node
+        app: rdma-cni
+        name: rdma-cni
+    spec:
+      hostNetwork: true
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      nodeSelector:
+        node-role.kubernetes.io/worker-cnf: ""
+      containers:
+        - name: rdma-cni
+          image: docker.io/mellanox/rdma-cni
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "50Mi"
+            limits:
+              cpu: "100m"
+              memory: "50Mi"
+          volumeMounts:
+            - name: cnibin
+              mountPath: /host/opt/cni/bin
+      volumes:
+        - name: cnibin
+          hostPath:
+            path: /var/lib/cni/bin

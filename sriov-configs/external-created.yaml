@@ -1,0 +1,63 @@
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.5.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-5"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: sriov_nic_2
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: sriov-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  nicSelector:
+    pfNames: ["ens3f0#5-9"]
+  nodeSelector:
+    kubernetes.io/hostname: cnfdt4.lab.eng.tlv2.redhat.com
+  numVfs: 10
+  priority: 99
+  resourceName: sriov_nic_1
+  externallyCreated: true
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.5.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-6"}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_1
+  metaPlugins: |
+    {
+      "type": "rdma"
+    }
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: dpdk-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  isRdma: true
+  nicSelector:
+    pfNames: ["eno1np0"]
+  nodeSelector:
+    kubernetes.io/hostname: cnfdt4.lab.eng.tlv2.redhat.com
+  numVfs: 5
+  priority: 99
+  resourceName: dpdk_nic_1
+  externallyCreated: true

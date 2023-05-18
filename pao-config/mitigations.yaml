@@ -1,0 +1,9 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker-cnf
+  name: 99-openshift-machineconfig-worker-cnf-kargs
+spec:
+  kernelArguments:
+    - mitigations=off
