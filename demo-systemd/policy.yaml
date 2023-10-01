@@ -1,0 +1,56 @@
+apiVersion: v1
+items:
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodePolicy
+  metadata:
+    name: dpdk-nic-1
+    namespace: openshift-sriov-network-operator
+  spec:
+    deviceType: vfio-pci
+    isRdma: false
+    needVhostNet: true
+    nicSelector:
+      pfNames:
+      - ens1f0#5-9
+    nodeSelector:
+      kubernetes.io/hostname: cnfdt7.lab.eng.tlv2.redhat.com
+    numVfs: 10
+    priority: 99
+    resourceName: dpdk_nic_1
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodePolicy
+  metadata:
+    name: main-nic-1
+    namespace: openshift-sriov-network-operator
+  spec:
+    deviceType: netdevice
+    isRdma: false
+    nicSelector:
+      pfNames:
+      - eno1#1-9
+    nodeSelector:
+      kubernetes.io/hostname: cnfdt7.lab.eng.tlv2.redhat.com
+    numVfs: 10
+    priority: 99
+    resourceName: main_nic_1
+- apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetworkNodePolicy
+  metadata:
+    name: sriov-nic-1
+    namespace: openshift-sriov-network-operator
+  spec:
+    deviceType: netdevice
+    isRdma: false
+    needVhostNet: true
+    nicSelector:
+      pfNames:
+      - ens1f0#0-4
+    nodeSelector:
+      kubernetes.io/hostname: cnfdt7.lab.eng.tlv2.redhat.com
+    numVfs: 10
+    priority: 99
+    resourceName: sriov_nic_1
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""

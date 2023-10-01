@@ -1,0 +1,95 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: use-vf0-for-networking
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: /usr/local/bin/disable-pf
+          mode: 0700
+          contents:
+            #              #!/bin/bash -x
+            #              VF_EXIST=`ip link show eno1 | grep "vf 0" | wc -l`
+            #
+            #              if [[ $VF_EXIST == 1 ]];then
+            #              echo "disable eno1 as we have a vf0"
+            #              nmcli con up ethernet-eno1
+            #              fi
+            source: data:text/plain;charset=utf-8;base64,IyEvYmluL2Jhc2ggLXgKVkZfRVhJU1Q9YGlwIGxpbmsgc2hvdyBlbm8xIHwgZ3JlcCAidmYgMCIgfCB3YyAtbGAKICAgICAgCmlmIFtbICRWRl9FWElTVCA9PSAxIF1dO3RoZW4KZWNobyAiZGlzYWJsZSBlbm8xIGFzIHdlIGhhdmUgYSB2ZjAiCm5tY2xpIGNvbiB1cCBldGhlcm5ldC1lbm8xCmVjaG8gZG9uZQpleGl0IDAKZmkKCg==
+        - path: /etc/NetworkManager/conf.d/test.conf
+          mode: 0600
+          overwrite: true
+          contents:
+            source: data:text/plain;charset=utf-8;base64,W2RldmljZV0KbWF0Y2gtZGV2aWNlPWludGVyZmFjZS1uYW1lOmVubzF2MAptYW5hZ2VkPTEK
+#            inline: |
+#              [device]
+#              match-device=interface-name:eno1v0
+#              managed=1
+        - path: /etc/NetworkManager/system-connections/eno1v0.nmconnection
+          mode: 0600
+          overwrite: true
+          contents:
+            source: data:text/plain;charset=utf-8;base64,W2Nvbm5lY3Rpb25dCmlkPWVubzF2MAp0eXBlPTgwMi0zLWV0aGVybmV0CmF1dG9jb25uZWN0PXRydWUKYXV0b2Nvbm5lY3QtcHJpb3JpdHk9MzAwCmludGVyZmFjZS1uYW1lPWVubzF2MAoKW2lwdjRdCmFkZHJlc3M9MTAuNDYuNTUuMjEvMjQKZ2F0ZXdheT0xMC40Ni41NS4yNTQKZG5zPTEwLjQ2LjU1LjIxOzEwLjM1LjI1NS4xNDsxMC40NS4yNDguMTUKZG5zLXNlYXJjaD0KbWV0aG9kPW1hbnVhbAo=
+#            inline: |
+#              [connection]
+#              id=eno1v0
+#              type=802-3-ethernet
+#              autoconnect=true
+#              autoconnect-priority=300
+#              interface-name=eno1v0
+#
+#              [ipv4]
+#              address=10.46.55.21/24
+#              gateway=10.46.55.254
+#              dns=10.46.55.21;10.35.255.14;10.45.248.15
+#              dns-search=
+#              method=manual
+        - path: /etc/NetworkManager/system-connections/ethernet-eno1.nmconnection
+          mode: 0600
+          overwrite: true
+          contents:
+            source: data:text/plain;charset=utf-8;base64,W2Nvbm5lY3Rpb25dCmlkPWV0aGVybmV0LWVubzEKdHlwZT1ldGhlcm5ldAppbnRlcmZhY2UtbmFtZT1lbm8xCmF1dG9jb25uZWN0PXRydWUKYXV0b2Nvbm5lY3QtcHJpb3JpdHk9MzAwCgpbZXRoZXJuZXRdCgpbaXB2NF0KbWV0aG9kPWRpc2FibGVkCgpbaXB2Nl0KYWRkci1nZW4tbW9kZT1zdGFibGUtcHJpdmFjeQptZXRob2Q9ZGlzYWJsZWQKCltwcm94eV0K
+#            inline: |
+#              [connection]
+#              id=ethernet-eno1
+#              type=ethernet
+#              interface-name=eno1
+#              autoconnect=true
+#              autoconnect-priority=300
+#
+#              [ethernet]
+#
+#              [ipv4]
+#              method=disabled
+#
+#              [ipv6]
+#              addr-gen-mode=stable-privacy
+#              method=disabled
+#
+#              [proxy]
+    systemd:
+      units:
+        - contents: |
+            [Unit]
+            Description=Configures SRIOV VF NIC as default
+            # Removal of this file signals firstboot completion
+            ConditionPathExists=!/etc/ignition-machine-config-encapsulated.json
+            # This service is used to configure the SR-IOV VFs on NICs
+            Wants=network-pre.target NetworkManager.service
+            After=NetworkManager.service
+            Before=ovs-configuration.service
+            
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/local/bin/disable-pf
+            StandardOutput=journal+console
+            
+            [Install]
+            WantedBy=multi-user.target
+          enabled: true
+          name: "disable-pf.service"

@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toolbox
+  labels:
+    app: toolbox
+    namespace: seba
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: toolbox
+  template:
+    metadata:
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+          {
+           "name": "dpdk-network-1",
+           "namespace": "seba"
+          }
+        ]'
+      labels:
+        app: toolbox
+    spec:
+      containers:
+        - command:
+            - /bin/bash
+            - -c
+            - sleep INF
+          image: quay.io/schseba/toolbox:latest
+          imagePullPolicy: Always
+          name: dpdk
+          securityContext:
+            runAsUser: 0 #for root container
+      terminationGracePeriodSeconds: 2

@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "dpdk-network-1",
+       "mac": "50:00:00:00:00:01",
+       "namespace": "seba"
+      }
+    ]'
+  labels:
+    app: dpdk
+  name: toolbox
+  namespace: seba
+spec:
+  tolerations:
+    - key: "node.kubernetes.io/not-ready"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 120000
+    - key: "node.kubernetes.io/unreachable"
+      operator: "Exists"
+      effect: "NoExecute"
+      tolerationSeconds: 120000
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/schseba/toolbox:latest
+      imagePullPolicy: Always
+      name: dpdk
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW #for mlx only
+            - NET_ADMIN
+        runAsUser: 0 #for root container
+  terminationGracePeriodSeconds: 2

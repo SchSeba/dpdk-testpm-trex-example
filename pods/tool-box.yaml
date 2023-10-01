@@ -5,8 +5,7 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '[
       {
-       "name": "dpdk-network-1",
-       "mac": "50:00:00:00:00:01",
+       "name": "sriov-network-2",
        "namespace": "seba"
       }
     ]'
@@ -24,11 +23,5 @@ spec:
       imagePullPolicy: Always
       name: dpdk
       securityContext:
-        capabilities:
-          add:
-            - IPC_LOCK
-            - SYS_RESOURCE
-            - NET_RAW #for mlx only
-            - NET_ADMIN
         runAsUser: 0 #for root container
   terminationGracePeriodSeconds: 2

@@ -6,7 +6,6 @@ metadata:
     k8s.v1.cni.cncf.io/networks: '[
       {
        "name": "dpdk-network-1",
-       "mac": "60:00:00:00:00:01",
        "namespace": "seba"
       }
     ]'
@@ -15,7 +14,7 @@ metadata:
     irq-load-balancing.crio.io: "disable"
   labels:
     app: dpdk
-  name: testpmd
+  name: testpmd-1
   namespace: seba
 spec:
   runtimeClassName: performance-performance
@@ -29,25 +28,27 @@ spec:
                 values:
                   - trex
           topologyKey: kubernetes.io/hostname
-  securityContext:
-    fsGroup: 1001
+#  securityContext:
+#    fsGroup: 1001
   containers:
     - command:
         - /bin/bash
         - -c
         - sleep INF
-      image: quay.io/schseba/dpdk:test
+#      image: registry-proxy.engineering.redhat.com/rh-osbs/dpdk-base@sha256:30f4849b65134e68d71f850e7c6ec3857b2607566545764db03c74416d1d32f8
+#      image: quay.io/schseba/dpdk:test
+      image: quay.io/schseba/dpdk:rhel-original
       imagePullPolicy: Always
       name: dpdk
       resources:
         limits:
-          cpu: "16"
-          hugepages-1Gi: 8Gi
-          memory: 2Gi
+          cpu: "4"
+          hugepages-1Gi: 1Gi
+          memory: 1Gi
         requests:
-          cpu: "16"
-          hugepages-1Gi: 8Gi
-          memory: 2Gi
+          cpu: "4"
+          hugepages-1Gi: 1Gi
+          memory: 1Gi
       securityContext:
 #        privileged: true
         capabilities:

@@ -1,0 +1,41 @@
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 02-worker-vfio-no-iommu
+spec:
+  config:
+    ignition:
+      version: 3.1.0
+    storage:
+      files:
+#        - contents:
+#            source: data:text/plain;charset=utf-8;base64,b3B0aW9ucyB2ZmlvIGVuYWJsZV91bnNhZmVfbm9pb21tdV9tb2RlPTEK
+#          mode: 420
+#          overwrite: true
+#          path: /etc/modules-load.d/vfio.conf
+        - contents:
+            source: data:text/plain;charset=utf-8;base64,b3B0aW9ucyB2ZmlvIGVuYWJsZV91bnNhZmVfbm9pb21tdV9tb2RlPTEKb3B0aW9ucyB2ZmlvX2lvbW11X3R5cGUxIGFsbG93X3Vuc2FmZV9pbnRlcnJ1cHRzPTEK
+          mode: 420
+          overwrite: true
+          path: /etc/modprobe.d/vfio.conf
+#    systemd:
+#      units:
+#        - contents: |
+#            [Unit]
+#            Description=vfio no-iommu
+#            Before=kubelet.service crio.service node-valid-hostname.service
+#
+#            [Service]
+#            # Need oneshot to delay kubelet
+#            Type=oneshot
+#            ExecStart=/usr/bin/bash -c "modprobe vfio enable_unsafe_noiommu_mode=1"
+#            StandardOutput=journal+console
+#            StandardError=journal+console
+#
+#            [Install]
+#            WantedBy=network-online.target
+#          enabled: true
+#          name: "vfio.service"

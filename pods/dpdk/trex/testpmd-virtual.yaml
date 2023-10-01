@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "dpdk-network-1",
+       "namespace": "seba"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "disable"
+    cpu-quota.crio.io: "disable"
+    irq-load-balancing.crio.io: "disable"
+  labels:
+    app: dpdk
+  name: testpmd-1
+  namespace: seba
+spec:
+  runtimeClassName: performance-performance
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - trex
+          topologyKey: kubernetes.io/hostname
+#  securityContext:
+#    fsGroup: 1001
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+#      image: registry-proxy.engineering.redhat.com/rh-osbs/dpdk-base@sha256:30f4849b65134e68d71f850e7c6ec3857b2607566545764db03c74416d1d32f8
+#      image: quay.io/schseba/dpdk:test
+      image: quay.io/schseba/dpdk:rhel-original
+      imagePullPolicy: Always
+      name: dpdk
+      resources:
+        limits:
+          cpu: "4"
+          hugepages-1Gi: 1Gi
+          memory: 1Gi
+        requests:
+          cpu: "4"
+          hugepages-1Gi: 1Gi
+          memory: 1Gi
+      securityContext:
+#        privileged: true
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW
+            - NET_ADMIN
+            - SYS_RAWIO
+            - SYS_ADMIN
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /mnt/huge
+          name: hugepages
+  terminationGracePeriodSeconds: 5
+  volumes:
+    - emptyDir:
+        medium: HugePages
+      name: hugepages
