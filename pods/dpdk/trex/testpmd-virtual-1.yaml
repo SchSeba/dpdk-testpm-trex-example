@@ -14,7 +14,7 @@ metadata:
     irq-load-balancing.crio.io: "disable"
   labels:
     app: dpdk
-  name: testpmd-1
+  name: testpmd-2
   namespace: seba
 spec:
   runtimeClassName: performance-performance
@@ -30,15 +30,6 @@ spec:
       image: quay.io/schseba/dpdk:rhel-original
       imagePullPolicy: Always
       name: dpdk
-      resources:
-        limits:
-          cpu: "3"
-          hugepages-1Gi: 1Gi
-          memory: 500M
-        requests:
-          cpu: "3"
-          hugepages-1Gi: 1Gi
-          memory: 500M
       securityContext:
 #        privileged: true
         capabilities:
@@ -50,11 +41,4 @@ spec:
             - SYS_RAWIO
             - SYS_ADMIN
         runAsUser: 0
-      volumeMounts:
-        - mountPath: /mnt/huge
-          name: hugepages
   terminationGracePeriodSeconds: 5
-  volumes:
-    - emptyDir:
-        medium: HugePages
-      name: hugepages

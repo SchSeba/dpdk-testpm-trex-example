@@ -1,0 +1,116 @@
+---
+- name: Prepare Server for virtual clusters
+  hosts: hypervisors
+  become: yes  # This allows you to run commands with sudo
+
+  tasks:
+    - name: Install packages
+      package:
+        name:
+        - libvirt-daemon
+        - qemu-kvm
+        - libvirt-client
+        - podman
+        - make
+        - jq
+        - tar
+        - git
+        - python3-pip
+        - automake
+        - gcc
+        - glibc
+        - glibc-utils
+        - glib2-devel
+        - zlib-devel
+        - pixman-devel
+        - flex
+        - bison
+        - numad
+        - numactl-devel
+        - numactl-libs
+        - numactl
+        - libtool
+        - gnutls-utils
+        - gnutls-devel
+        - libnl3-devel
+        - libxml2-devel
+        - libpciaccess-devel
+        - rpcbind
+        - readline-devel
+        - rpcgen
+        - libxslt-devel
+        - bzip2
+        - guestfs-tools
+        state: present
+
+    - name: Check if SSH key exists
+      stat:
+        path: /root/.ssh/id_rsa
+      register: key_file
+
+    - name: Generate SSH key if it doesn't exist
+      command: ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
+      when: key_file.stat.exists == False
+
+    - name: Disable SELinux by setting SELINUX to disabled
+      lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=disabled'
+      register: selinux
+
+    - name: Generate SSH key if it doesn't exist
+      command: setenforce 0
+      when: selinux.stat.changed == True
+
+    - name: Ensure the service is enabled
+      service:
+        name: libvirtd
+        enabled: yes
+        state: started
+
+    - name: get go
+      get_url:
+        url: "https://go.dev/dl/go1.21.3.linux-amd64.tar.gz"  # Specify the remote file path
+        dest: /root/go1.21.3.linux-amd64.tar.gz  # Specify the local directory where the file will be copied
+
+    - name: delete old versions of go
+      file:
+        path: rm -rf /usr/local/go
+        state: absent
+
+    - name: extract go version
+      command: tar -C /usr/local -xzf go1.21.3.linux-amd64.tar.gz
+
+    - name: Add go path to bashrc
+      lineinfile:
+        path: /root/.bashrc
+        line: "export PATH=$PATH:/usr/local/go/bin"
+        create: yes  # Add the line if it doesn't exist
+
+    - name: clone qemu repo
+      get_url:
+        url: https://download.qemu.org/qemu-8.1.2.tar.xz
+        dest: /root/qemu-8.1.2.tar.xz
+
+    - name: extract qemu from tar
+      command: tar xvJf qemu-8.1.2.tar.xz
+
+    - name: install ninja
+      pip:
+        name: ninja
+
+    - name: configure qemu
+      command: ./configure --enable-debug --prefix=/usr/local
+      args:
+        chdir: /root/qemu-8.1.2
+
+    - name: make qemu
+      command: make -j
+      args:
+        chdir: /root/qemu-8.1.2
+
+    - name: make install
+      command: make install
+      args:
+        chdir: /root/qemu-8.1.2
