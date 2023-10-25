@@ -4,6 +4,10 @@
   become: yes  # This allows you to run commands with sudo
 
   tasks:
+    - name: Install epel packages
+      package:
+        name: epel-release
+
     - name: Install packages
       package:
         name:
@@ -41,6 +45,7 @@
         - libxslt-devel
         - bzip2
         - guestfs-tools
+        - fuse-sshfs
         state: present
 
     - name: Check if SSH key exists
