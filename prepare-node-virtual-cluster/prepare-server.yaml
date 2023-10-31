@@ -2,6 +2,7 @@
 - name: Prepare Server for virtual clusters
   hosts: hypervisors
   become: yes  # This allows you to run commands with sudo
+  gather_facts: no
 
   tasks:
     - name: Install epel packages
@@ -64,9 +65,9 @@
         line: 'SELINUX=disabled'
       register: selinux
 
-    - name: Generate SSH key if it doesn't exist
+    - name: set selinux enforce 0 if the file was changed (to avoid reboot on first run)
       command: setenforce 0
-      when: selinux.stat.changed == True
+      when: selinux.changed == True
 
     - name: Ensure the service is enabled
       service:
@@ -85,12 +86,21 @@
         state: absent
 
     - name: extract go version
-      command: tar -C /usr/local -xzf go1.21.3.linux-amd64.tar.gz
+      command: tar -C /usr/local -xzf /root/go1.21.3.linux-amd64.tar.gz
 
     - name: Add go path to bashrc
+      become: false
       lineinfile:
-        path: /root/.bashrc
+        path: ~/.bashrc
         line: "export PATH=$PATH:/usr/local/go/bin"
+        create: yes  # Add the line if it doesn't exist
+
+
+    - name: Add user local bin path to bashrc
+      become: false
+      lineinfile:
+        path: ~/.bashrc
+        line: "export PATH=$PATH:/usr/local/bin"
         create: yes  # Add the line if it doesn't exist
 
     - name: clone qemu repo
@@ -99,11 +109,19 @@
         dest: /root/qemu-8.1.2.tar.xz
 
     - name: extract qemu from tar
-      command: tar xvJf qemu-8.1.2.tar.xz
+      command: tar xvJf /root/qemu-8.1.2.tar.xz
+      args:
+        chdir: /root/
 
     - name: install ninja
       pip:
         name: ninja
+
+    - name: Create symbolic link
+      file:
+        src: "/usr/local/bin/ninja"
+        dest: "/usr/bin/ninja"
+        state: link
 
     - name: configure qemu
       command: ./configure --enable-debug --prefix=/usr/local
@@ -114,6 +132,7 @@
       command: make -j
       args:
         chdir: /root/qemu-8.1.2
+        executable: /bin/bash
 
     - name: make install
       command: make install
