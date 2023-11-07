@@ -150,3 +150,10 @@
       package:
         name:
         - kcli
+
+    - name: Set podman short-name-mode to permissive
+      ansible.builtin.replace:
+        path: /etc/containers/registries.conf
+        regexp: 'short-name-mode = "enforcing"'
+        replace: 'short-name-mode = "permissive"'
+
