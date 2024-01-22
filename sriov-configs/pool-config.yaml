@@ -1,0 +1,10 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkPoolConfig
+metadata:
+  name: worker
+  namespace: openshift-sriov-network-operator
+spec:
+  maxUnavailable: 2
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/worker: ""

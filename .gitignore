@@ -1,1 +1,3 @@
 prepare-node-virtual-cluster/inventory.ini
+prepare-node-virtual-cluster/files/openshift_pull.json
+prepare-node-virtual-cluster/group_vars/all.yml

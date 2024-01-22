@@ -1,0 +1,25 @@
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: |
+    {
+    "type": "static",
+    "addresses": [
+        {
+            "address": "10.10.0.1/24",
+            "gateway": "10.10.0.254"
+        }
+    ],
+    "routes": [
+        { "dst": "192.168.0.0/16", "gw": "10.10.5.1" },
+        { "dst": "192.168.1.0/16", "gw": "10.10.5.1" }
+    ]
+    }
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_1

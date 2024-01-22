@@ -105,11 +105,11 @@
 
     - name: clone qemu repo
       get_url:
-        url: https://download.qemu.org/qemu-8.1.2.tar.xz
-        dest: /root/qemu-8.1.2.tar.xz
+        url: https://download.qemu.org/qemu-8.2.0.tar.xz
+        dest: /root/qemu-8.2.0.tar.xz
 
     - name: extract qemu from tar
-      command: tar xvJf /root/qemu-8.1.2.tar.xz
+      command: tar xvJf /root/qemu-8.2.0.tar.xz
       args:
         chdir: /root/
 
@@ -126,15 +126,46 @@
     - name: configure qemu
       command: ./configure --enable-debug --prefix=/usr/local
       args:
-        chdir: /root/qemu-8.1.2
+        chdir: /root/qemu-8.2.0
 
     - name: make qemu
       command: make -j
       args:
-        chdir: /root/qemu-8.1.2
+        chdir: /root/qemu-8.2.0
         executable: /bin/bash
 
     - name: make install
       command: make install
       args:
-        chdir: /root/qemu-8.1.2
+        chdir: /root/qemu-8.2.0
+
+    - name: enable kcli copr
+      community.general.copr:
+        state: enabled
+        name: 'karmab/kcli'
+
+    - name: install kcli
+      package:
+        name: kcli
+
+    - name: install kubectl
+      ansible.builtin.get_url:
+        url: https://dl.k8s.io/release/v1.29.1/bin/linux/amd64/kubectl
+        dest: /bin/kubectl
+        mode: '0770'
+
+    - name: Copy podman images short name
+      ansible.builtin.copy:
+        src: 'files/001-shortnames.conf'
+        dest: /etc/containers/registries.conf.d/001-shortnames.conf
+
+    - name: Copy openshift pull secret
+      ansible.builtin.copy:
+        src: 'files/openshift_pull.json'
+        dest: /root/openshift_pull.json
+
+    - name: "create job for podman system prune"
+      ansible.builtin.cron:
+        name: "run podman system prune"
+        special_time: "daily"
+        job: "podman system prune -f"

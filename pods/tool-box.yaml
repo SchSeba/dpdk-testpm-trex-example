@@ -5,7 +5,7 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '[
       {
-       "name": "sriov-network-2",
+       "name": "sriov-network-1",
        "namespace": "seba"
       }
     ]'
@@ -23,5 +23,6 @@ spec:
       imagePullPolicy: Always
       name: dpdk
       securityContext:
+        privileged: true
         runAsUser: 0 #for root container
   terminationGracePeriodSeconds: 2

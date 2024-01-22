@@ -1,0 +1,85 @@
+---
+- name: Prepare Server for virtual clusters
+  hosts: hypervisors
+  become: yes  # This allows you to run commands with sudo
+  gather_facts: no
+  vars:
+    - configuration:
+        - name: "operator-ocp-runner"
+          key_name: "operator"
+          tag: "ocp"
+          id: "244"
+          subnet: "192.168.123"
+          url: "https://github.com/k8snetworkplumbingwg/sriov-network-operator"
+        - name: "operator-k8s-runner"
+          key_name: "operator"
+          tag: "sriov"
+          id: "241"
+          subnet: "192.168.124"
+          url: "https://github.com/k8snetworkplumbingwg/sriov-network-operator"
+        - name: "cni-k8s-runner"
+          key_name: "cni"
+          tag: "sriov"
+          id: "242"
+          subnet: "192.168.124"
+          url: "https://github.com/k8snetworkplumbingwg/sriov-cni"
+        - name: "webhook-k8s-runner"
+          key_name: "webhook"
+          tag: "sriov"
+          id: "245"
+          subnet: "192.168.124"
+          url: "https://github.com/k8snetworkplumbingwg/network-resources-injector"
+        - name: "device-plugin-k8s-runner"
+          key_name: "device-plugin"
+          tag: "sriov"
+          id: "243"
+          subnet: "192.168.124"
+          url: "https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin"
+
+  tasks:
+    - name: create folders for the runners
+      file:
+        path: /root/{{item.name}}-{{uid}}
+        state: directory
+      loop: "{{configuration}}"
+
+    - name: download github runner
+      ansible.builtin.get_url:
+        url: https://github.com/actions/runner/releases/download/v2.311.0/actions-runner-linux-x64-2.311.0.tar.gz
+        dest: /tmp/actions-runner-linux.tar.gz
+
+    - name: extract runner
+      ansible.builtin.unarchive:
+        src: /tmp/actions-runner-linux.tar.gz
+        dest: /root/{{item.name}}-{{uid}}/
+        remote_src: yes
+      loop: "{{configuration}}"
+
+    - name: Template the .env for environment variables
+      ansible.builtin.template:
+        src: files/env-template.j2
+        dest: /root/{{item.name}}-{{uid}}/.env
+        mode: '0644'
+      loop: "{{configuration}}"
+
+    - name: run github runner config.sh
+      ansible.builtin.shell: RUNNER_ALLOW_RUNASROOT=true ./config.sh --unattended --replace --name {{item.name}}-{{uid}} --url {{item.url}} --token {{keys[item.key_name]}} --labels {{item.tag}} --work data
+      args:
+        chdir: /root/{{item.name}}-{{uid}}
+      register: command_result
+      failed_when: "command_result.rc != 0 and 'is already configured' not in command_result.stderr"
+      loop: "{{configuration}}"
+
+    - name: enable runner service
+      ansible.builtin.shell: RUNNER_ALLOW_RUNASROOT=true ./svc.sh install
+      args:
+        chdir: /root/{{item.name}}-{{uid}}
+      register: command_result
+      failed_when: "command_result.rc != 0 and 'Failed: error: exists ' not in command_result.stderr"
+      loop: "{{configuration}}"
+
+    - name: start runner service
+      ansible.builtin.shell: RUNNER_ALLOW_RUNASROOT=true ./svc.sh start
+      args:
+        chdir: /root/{{item.name}}-{{uid}}
+      loop: "{{configuration}}"
