@@ -13,9 +13,9 @@
       package:
         name:
         - libvirt-daemon
+        - libvirt
         - qemu-kvm
         - gzip
-        - libvirt-client
         - podman
         - make
         - jq
@@ -170,9 +170,3 @@
         name: "run podman system prune"
         special_time: "daily"
         job: "podman system prune -f"
-
-    - name: Stop service firewalld
-      ansible.builtin.service:
-        name: firewalld
-        state: stopped
-        enabled: false

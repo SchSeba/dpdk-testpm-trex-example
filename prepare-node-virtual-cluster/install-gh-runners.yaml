@@ -35,6 +35,12 @@
           id: "243"
           subnet: "192.168.124"
           url: "https://github.com/k8snetworkplumbingwg/sriov-network-device-plugin"
+        - name: "ib-k8s"
+          key_name: "ib"
+          tag: "sriov"
+          id: "246"
+          subnet: "192.168.124"
+          url: "https://github.com/k8snetworkplumbingwg/ib-sriov-cni"
 
   tasks:
     - name: create folders for the runners
