@@ -1,22 +1,23 @@
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetworkNodePolicy
 metadata:
-  name: sriov-nic-1
+  name: dpdk-nic-1
   namespace: openshift-sriov-network-operator
 spec:
   deviceType: netdevice
+  isRdma: true
   nicSelector:
     pfNames: ["eno1np0"]
   nodeSelector:
     kubernetes.io/hostname: cnfdt4.lab.eng.tlv2.redhat.com
-  numVfs: 10
+  numVfs: 5
   priority: 99
-  resourceName: sriov_nic_1
+  resourceName: dpdk_nic_1
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
 metadata:
-  name: sriov-network-1
+  name: dpdk-network-1
   namespace: openshift-sriov-network-operator
 spec:
   ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.1.0/24"}]],"dataDir":
@@ -24,4 +25,4 @@ spec:
   networkNamespace: seba
   spoofChk: "on"
   trust: "on"
-  resourceName: sriov_nic_1
+  resourceName: dpdk_nic_1
