@@ -39,6 +39,9 @@ oc delete mutatingwebhookconfigurations.admissionregistration.k8s.io sriov-opera
 oc delete mutatingwebhookconfigurations.admissionregistration.k8s.io network-resources-injector-config || true
 oc delete validatingwebhookconfigurations.admissionregistration.k8s.io sriov-operator-webhook-config || true
 
+echo "delete sriov crds"
+oc get crd | grep sriovnetwork.openshift.io | awk '{print "oc delete crd",$1}' | sh
+
 echo "wait for ${OPERATOR_NAMESPACE} namespace to get removed"
 ATTEMPTS=0
 MAX_ATTEMPTS=72
@@ -46,7 +49,7 @@ ready=false
 sleep_time=5
 until $ready || [ $ATTEMPTS -eq $MAX_ATTEMPTS ]
 do
-    echo "waiting for cert manager webhook to be ready"
+    echo "waiting for ${OPERATOR_NAMESPACE} namespace to be removed"
     if [ `oc get ns | grep ${OPERATOR_NAMESPACE} | wc -l` == 0 ]; then
         echo "${OPERATOR_NAMESPACE} namespace removed}"
         ready=true
@@ -89,11 +92,11 @@ SRIOV_DEVICE_PLUGIN_IMAGE=${INTERNAL_REGISTRY}"/sriov-network-device-plugin:late
 EXTERNAL_SRIOV_DP_WEBHOOK_IMAGE="quay.io/openshift/origin-sriov-dp-admission-controller:${EXTERNAL_IMAGES_TAG}"
 SRIOV_DP_WEBHOOK_IMAGE=${INTERNAL_REGISTRY}"/sriov-dp-admission-controller:latest"
 
-EXTERNAL_RDMA_IMAGE="quay.io/openshift/origin-rdma-cni:${EXTERNAL_IMAGES_TAG}"
-RDMA_IMAGE=${INTERNAL_REGISTRY}"/rdma-cni:latest"
-
 EXTERNAL_SRIOV_INFINIBAND_IMAGE="quay.io/openshift/origin-sriov-infiniband-cni:${EXTERNAL_IMAGES_TAG}"
 SRIOV_INFINIBAND_IMAGE=${INTERNAL_REGISTRY}"/sriov-infiniband-cni:latest"
+
+EXTERNAL_RDMA_IMAGE="quay.io/openshift/origin-rdma-cni:${EXTERNAL_IMAGES_TAG}"
+RDMA_IMAGE=${INTERNAL_REGISTRY}"/rdma-cni:latest"
 
 # download opm
 REDHAT_BUGZILLA_PRODUCT_VERSION=`cat /etc/os-release | grep REDHAT_BUGZILLA_PRODUCT_VERSION`
@@ -134,13 +137,16 @@ podman pull --authfile=${OCP_PULL_SECRET} ${EXTERNAL_SRIOV_DP_WEBHOOK_IMAGE}
 podman tag ${EXTERNAL_SRIOV_DP_WEBHOOK_IMAGE} ${SRIOV_DP_WEBHOOK_IMAGE}
 podman push --authfile=${INTERNAL_REGISTRY_SECRET} ${SRIOV_DP_WEBHOOK_IMAGE}
 
-podman pull --authfile=${OCP_PULL_SECRET} ${EXTERNAL_RDMA_IMAGE}
-podman tag ${EXTERNAL_RDMA_IMAGE} ${RDMA_IMAGE}
-podman push --authfile=${INTERNAL_REGISTRY_SECRET} ${RDMA_IMAGE}
-
 podman pull --authfile=${OCP_PULL_SECRET} ${EXTERNAL_SRIOV_INFINIBAND_IMAGE}
 podman tag ${EXTERNAL_SRIOV_INFINIBAND_IMAGE} ${SRIOV_INFINIBAND_IMAGE}
 podman push --authfile=${INTERNAL_REGISTRY_SECRET} ${SRIOV_INFINIBAND_IMAGE}
+
+# rdma-cni images doesn't exist in older sriov operator versions
+if [ `cat ${CSV_FILE_PATH} | grep ${EXTERNAL_RDMA_IMAGE} | wc -l` == 1 ]; then
+  podman pull --authfile=${OCP_PULL_SECRET} ${EXTERNAL_RDMA_IMAGE}
+  podman tag ${EXTERNAL_RDMA_IMAGE} ${RDMA_IMAGE}
+  podman push --authfile=${INTERNAL_REGISTRY_SECRET} ${RDMA_IMAGE}
+fi
 
 # switch images in csv
 sed -i "s|${EXTERNAL_SRIOV_NETWORK_OPERATOR_IMAGE}|${SRIOV_NETWORK_OPERATOR_IMAGE}|" ${CSV_FILE_PATH}
@@ -149,8 +155,9 @@ sed -i "s|${EXTERNAL_SRIOV_NETWORK_WEBHOOK_IMAGE}|${SRIOV_NETWORK_WEBHOOK_IMAGE}
 sed -i "s|${EXTERNAL_SRIOV_CNI_IMAGE}|${SRIOV_CNI_IMAGE}|" ${CSV_FILE_PATH}
 sed -i "s|${EXTERNAL_SRIOV_DEVICE_PLUGIN_IMAGE}|${SRIOV_DEVICE_PLUGIN_IMAGE}|" ${CSV_FILE_PATH}
 sed -i "s|${EXTERNAL_SRIOV_DP_WEBHOOK_IMAGE}|${SRIOV_DP_WEBHOOK_IMAGE}|" ${CSV_FILE_PATH}
-sed -i "s|${EXTERNAL_RDMA_IMAGE}|${RDMA_IMAGE}|" ${CSV_FILE_PATH}
 sed -i "s|${EXTERNAL_SRIOV_INFINIBAND_IMAGE}|${SRIOV_INFINIBAND_IMAGE}|" ${CSV_FILE_PATH}
+sed -i "s|${EXTERNAL_RDMA_IMAGE}|${RDMA_IMAGE}|" ${CSV_FILE_PATH}
+sed -i "s|IfNotPresent|Always|" ${CSV_FILE_PATH}
 
 # build bundle
 echo "## build bundle"
