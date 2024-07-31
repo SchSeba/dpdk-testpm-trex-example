@@ -40,7 +40,7 @@ oc delete mutatingwebhookconfigurations.admissionregistration.k8s.io network-res
 oc delete validatingwebhookconfigurations.admissionregistration.k8s.io sriov-operator-webhook-config || true
 
 echo "delete sriov crds"
-oc get crd | grep sriovnetwork.openshift.io | awk '{print "oc delete crd",$1}' | sh
+oc get crd | grep sriovnetwork.openshift.io | awk '{print "oc delete crd",$1}' | sh || true
 
 echo "wait for ${OPERATOR_NAMESPACE} namespace to get removed"
 ATTEMPTS=0
