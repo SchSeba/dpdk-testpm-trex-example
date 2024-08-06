@@ -115,7 +115,7 @@ EXTERNAL_SRIOV_NETWORK_OPERATOR_IMAGE="quay.io/openshift/origin-sriov-network-op
 EXTERNAL_SRIOV_NETWORK_CONFIG_DAEMON_IMAGE="quay.io/openshift/origin-sriov-network-config-daemon:${EXTERNAL_IMAGES_TAG}"
 EXTERNAL_SRIOV_NETWORK_WEBHOOK_IMAGE="quay.io/openshift/origin-sriov-network-webhook:${EXTERNAL_IMAGES_TAG}"
 
-curl -L https https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest-4.16/opm-linux.tar.gz | tar xvz -C bin
+curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest-4.16/opm-linux.tar.gz | tar xvz -C bin
 
 # build containers from the sriov repo
 echo "## build operator image"
@@ -154,7 +154,7 @@ podman push ${BUNDLE_IMAGE} --tls-verify=false
 
 # build index image
 echo "## build index image"
-bin/opm index add --use-http -p podman --bundles ${BUNDLE_IMAGE} --tag ${INDEX_IMAGE}
+bin/opm-rhel8 index add --use-http -p podman --bundles ${BUNDLE_IMAGE} --tag ${INDEX_IMAGE}
 
 echo "## push index image"
 podman push ${INDEX_IMAGE} --tls-verify=false

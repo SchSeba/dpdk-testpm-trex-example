@@ -102,9 +102,10 @@ RDMA_IMAGE=${INTERNAL_REGISTRY}"/rdma-cni:latest"
 REDHAT_BUGZILLA_PRODUCT_VERSION=`cat /etc/os-release | grep REDHAT_BUGZILLA_PRODUCT_VERSION`
 MAJOR_VERSION=${REDHAT_BUGZILLA_PRODUCT_VERSION%%.*}
 if (( MAJOR_VERSION > 8 )); then
-    curl -L https https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest-4.16/opm-linux.tar.gz | tar xvz -C bin
+    curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest-4.16/opm-linux.tar.gz | tar xvz -C bin
+    mv bin/opm-rhel8 bin/opm
 else
-    curl -L https https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest-4.12/opm-linux.tar.gz | tar xvz -C bin
+    curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest-4.12/opm-linux.tar.gz | tar xvz -C bin
 fi
 
 # build containers from the sriov repo
