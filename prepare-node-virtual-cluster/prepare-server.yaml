@@ -2,7 +2,7 @@
 - name: Prepare Server for virtual clusters
   hosts: hypervisors
   become: yes  # This allows you to run commands with sudo
-  gather_facts: no
+  gather_facts: yes
 
   tasks:
     - name: Install epel packages
@@ -144,10 +144,27 @@
       community.general.copr:
         state: enabled
         name: 'karmab/kcli'
+      when: 
+        - ansible_facts['distribution'] != "RedHat"
 
     - name: install kcli
       package:
         name: kcli
+      when: 
+        - ansible_facts['distribution'] != "RedHat"
+
+    - name: Download installation script for kcli
+      get_url:
+        url: "https://raw.githubusercontent.com/karmab/kcli/main/install.sh"
+        dest: "/tmp/script.sh"
+        mode: "0755"
+      when: 
+        - ansible_facts['distribution'] == "RedHat"
+
+    - name: Execute installation script for kcli
+      command: "/bin/bash /tmp/script.sh"
+      when: 
+        - ansible_facts['distribution'] == "RedHat"
 
     - name: install kubectl
       ansible.builtin.get_url:
