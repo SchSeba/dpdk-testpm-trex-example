@@ -1,0 +1,11 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkPoolConfig
+metadata:
+  name: worker
+  namespace: openshift-sriov-network-operator
+spec:
+  maxUnavailable: 1
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: cnfdt4.lab.eng.tlv2.redhat.com
+  rdmaMode: exclusive

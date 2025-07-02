@@ -6,30 +6,12 @@ metadata:
 spec:
   deviceType: netdevice
   nicSelector:
-    pfNames: ["enp41s0"]
+    pfNames: ["eno2np1"]
   nodeSelector:
-    kubernetes.io/hostname: ocp-virt-worker-0.lab
+    kubernetes.io/hostname: cnfdt4.lab.eng.tlv2.redhat.com
   numVfs: 5
   priority: 99
   resourceName: sriov_nic_1
-  mtu: 1500
----
-apiVersion: sriovnetwork.openshift.io/v1
-kind: SriovNetworkNodePolicy
-metadata:
-  name: sriov-nic-2
-  namespace: openshift-sriov-network-operator
-spec:
-  deviceType: netdevice
-  nicSelector:
-    pfNames: ["enp22s0"]
-  nodeSelector:
-    kubernetes.io/hostname: ocp-virt-worker-0.lab
-  numVfs: 5
-  priority: 99
-  resourceName: sriov_nic_2
-  mtu: 1500
-#  externallyManaged: true
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork

@@ -1,0 +1,14 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: dpdk-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci
+  nicSelector:
+    netFilter: aws/NetworkID:090ab34e7af072e18
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  numVfs: 1
+  priority: 99
+  resourceName: dpdk_nic_1

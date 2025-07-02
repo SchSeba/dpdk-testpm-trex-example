@@ -1,0 +1,57 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: dpdk
+  name: testpmd-client
+  namespace: seba
+spec:
+  #  hostNetwork: true
+  runtimeClassName: performance-performance
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - trex
+          topologyKey: kubernetes.io/hostname
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/schseba/dpdk:24.11
+      imagePullPolicy: Always
+      name: dpdk
+      resources:
+        limits:
+          cpu: "2"
+          hugepages-1Gi: 2Gi
+          memory: 2Gi
+          openshift.io/dpdk_nic_1: "1"
+        requests:
+          cpu: "2"
+          hugepages-1Gi: 2Gi
+          memory: 2Gi
+          openshift.io/dpdk_nic_1: "1"
+      securityContext:
+        privileged: true
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW
+            - NET_ADMIN
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /mnt/huge
+          name: hugepages
+  terminationGracePeriodSeconds: 5
+  volumes:
+    - emptyDir:
+        medium: HugePages
+      name: hugepages

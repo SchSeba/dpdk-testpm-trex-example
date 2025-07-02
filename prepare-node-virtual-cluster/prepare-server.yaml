@@ -17,6 +17,7 @@
         - qemu-kvm
         - gzip
         - podman
+        - skopeo
         - make
         - jq
         - tar

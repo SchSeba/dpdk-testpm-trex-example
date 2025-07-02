@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "sriov-network-1",
+       "namespace": "seba"
+      }
+    ]'
+  labels:
+    app: dpdk-1
+  name: toolbox-1
+  namespace: seba
+spec:
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/schseba/toolbox:latest
+      imagePullPolicy: Always
+      name: dpdk
+      securityContext:
+        #        privileged: true
+        runAsUser: 0 #for root container
+  terminationGracePeriodSeconds: 2

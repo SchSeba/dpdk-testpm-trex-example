@@ -1,8 +1,9 @@
-FROM quay.io/centos/centos:stream9
+FROM quay.io/fedora/fedora:rawhide
 
-RUN dnf update -y && dnf install -y epel-release && dnf install -y iputils htop net-tools tcpdump iproute bind-utils bridge-utils procps-ng strace iperf3 perf && dnf clean all
+RUN dnf update -y && dnf install -y bpftrace iputils htop net-tools tcpdump iproute bind-utils bridge-utils procps-ng strace iperf3 perf && dnf clean all
 
 RUN setcap CAP_NET_ADMIN,CAP_NET_RAW=+ep /usr/sbin/ip \
     && setcap CAP_NET_ADMIN=+ep /usr/sbin/route
 
-ENTRYPOINT /bin/bash -c sleep INF
+ENTRYPOINT [ "/usr/libexec/catatonit/catatonit", "--" ]
+CMD ["/bin/bash", "-c", "sleep INF"]
