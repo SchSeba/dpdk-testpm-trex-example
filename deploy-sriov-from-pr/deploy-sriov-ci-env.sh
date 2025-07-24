@@ -3,6 +3,8 @@ set -xeo pipefail
 
 # load variables
 PR=${PR:-""}
+BRANCH=${BRANCH:-"main"}
+USE_OCP_DOCKERFILES=${USE_OCP_DOCKERFILES:-"true"}
 OPERATOR_NAMESPACE="openshift-sriov-network-operator"
 BUILD_POD_NAMESPACE="openshift-config"
 
@@ -17,9 +19,12 @@ rm -rf sriov-network-operator || true
 echo "clean index image"
 oc -n openshift-marketplace delete catalogsource ${CATALOG_NAME} || true
 
+echo "clean operatorConfig"
+oc -n $OPERATOR_NAMESPACE delete sriovOperatorConfig --all || true
+sleep 3
+
 echo "clean sriov namespace"
 oc delete ns $OPERATOR_NAMESPACE --wait=false || true
-#sleep 3
 
 echo "remove webhooks"
 oc delete mutatingwebhookconfigurations.admissionregistration.k8s.io sriov-operator-webhook-config || true
@@ -28,6 +33,55 @@ oc delete validatingwebhookconfigurations.admissionregistration.k8s.io sriov-ope
 
 echo "delete sriov crds"
 oc get crd | grep sriovnetwork.openshift.io | awk '{print "oc delete crd",$1}' | sh || true
+
+
+echo "configure internal registry"
+
+# find the first master node
+master_node=`oc get node | grep master | head -n 1 | awk '{print $1}'`
+
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: registry-pv
+spec:
+  capacity:
+    storage: 60Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteMany
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: registry-local-storage
+  local:
+    path: /mnt/
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - ${master_node}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-pv-claim
+  namespace: openshift-image-registry
+spec:
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 60Gi
+  storageClassName: registry-local-storage
+EOF
+
+kubectl patch configs.imageregistry.operator.openshift.io/cluster --patch '{"spec":{"defaultRoute":true,"storage":{"emptyDir": null,"pvc":{"claim":"registry-pv-claim"}},"topologySpreadConstraints":[],"rolloutStrategy":"Recreate","tolerations":[{"effect":"NoSchedule","key":"node-role.kubernetes.io/master","operator":"Exists"},{"effect":"NoSchedule","key":"node-role.kubernetes.io/control-plane","operator":"Exists"}]}}' --type=merge
+kubectl patch ingresscontrollers.operator.openshift.io/default -n openshift-ingress-operator --patch '{"spec":{"replicas": 1}}' --type=merge
+
 
 echo "wait for ${OPERATOR_NAMESPACE} namespace to get removed"
 ATTEMPTS=0
@@ -78,7 +132,6 @@ yum install git jq -y
 PULL_SECRET="/var/run/secrets/openshift.io/pull/.dockerconfigjson"
 
 REPO=${REPO:-"https://github.com/openshift/sriov-network-operator.git"}
-BRANCH=${BRANCH:-"master"}
 
 OPERATOR_NAMESPACE="openshift-sriov-network-operator"
 BUILD_POD_NAMESPACE="openshift-config"
@@ -117,15 +170,23 @@ EXTERNAL_SRIOV_NETWORK_WEBHOOK_IMAGE="quay.io/openshift/origin-sriov-network-web
 
 curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/latest-4.16/opm-linux.tar.gz | tar xvz -C bin
 
+echo '[aliases]'>> /etc/containers/registries.conf
+echo '"golang" = "docker.io/library/golang"'>> /etc/containers/registries.conf
+
+DOCKERFILE_EXTENSION=""
+if [[ "$USE_OCP_DOCKERFILES" == "true" ]]; then
+  DOCKERFILE_EXTENSION=".ocp"
+fi
+
 # build containers from the sriov repo
 echo "## build operator image"
-podman build --authfile=${PULL_SECRET} -t "${SRIOV_NETWORK_OPERATOR_IMAGE}" -f "Dockerfile.rhel7" .
+podman build --authfile=${PULL_SECRET} -t "${SRIOV_NETWORK_OPERATOR_IMAGE}" -f "Dockerfile${DOCKERFILE_EXTENSION}" .
 
 echo "## build daemon image"
-podman build --authfile=${PULL_SECRET} -t "${SRIOV_NETWORK_CONFIG_DAEMON_IMAGE}" -f "Dockerfile.sriov-network-config-daemon.rhel7" .
+podman build --authfile=${PULL_SECRET} -t "${SRIOV_NETWORK_CONFIG_DAEMON_IMAGE}" -f "Dockerfile.sriov-network-config-daemon${DOCKERFILE_EXTENSION}" .
 
 echo "## build webhook image"
-podman build --authfile=${PULL_SECRET} -t "${SRIOV_NETWORK_WEBHOOK_IMAGE}" -f "Dockerfile.webhook.rhel7" .
+podman build --authfile=${PULL_SECRET} -t "${SRIOV_NETWORK_WEBHOOK_IMAGE}" -f "Dockerfile.webhook${DOCKERFILE_EXTENSION}" .
 
 set +x
 pass=$( jq .\"image-registry.openshift-image-registry.svc:5000\".auth /var/run/secrets/openshift.io/push/.dockercfg )
@@ -178,6 +239,10 @@ spec:
       env:
       - name: PR
         value: "${PR}"
+      - name: BRANCH
+        value: "${BRANCH}"
+      - name: USE_OCP_DOCKERFILES
+        value: "${USE_OCP_DOCKERFILES}"
       command:
       - /bin/bash
       - -c

@@ -3,7 +3,7 @@ set -xeo pipefail
 
 # load variables
 REPO=${REPO:-"https://github.com/openshift/sriov-network-operator.git"}
-BRANCH=${BRANCH:-"master"}
+BRANCH=${BRANCH:-"main"}
 PR=${PR:-""}
 
 INTERNAL_REGISTRY=${INTERNAL_REGISTRY:-"registry:5000"}
@@ -110,13 +110,13 @@ fi
 
 # build containers from the sriov repo
 echo "## build operator image"
-podman build --authfile=${OCP_PULL_SECRET} -t "${SRIOV_NETWORK_OPERATOR_IMAGE}" -f "Dockerfile.rhel7" .
+podman build --authfile=${OCP_PULL_SECRET} -t "${SRIOV_NETWORK_OPERATOR_IMAGE}" -f "Dockerfile.ocp" .
 
 echo "## build daemon image"
-podman build --authfile=${OCP_PULL_SECRET} -t "${SRIOV_NETWORK_CONFIG_DAEMON_IMAGE}" -f "Dockerfile.sriov-network-config-daemon.rhel7" .
+podman build --authfile=${OCP_PULL_SECRET} -t "${SRIOV_NETWORK_CONFIG_DAEMON_IMAGE}" -f "Dockerfile.sriov-network-config-daemon.ocp" .
 
 echo "## build webhook image"
-podman build --authfile=${OCP_PULL_SECRET} -t "${SRIOV_NETWORK_WEBHOOK_IMAGE}" -f "Dockerfile.webhook.rhel7" .
+podman build --authfile=${OCP_PULL_SECRET} -t "${SRIOV_NETWORK_WEBHOOK_IMAGE}" -f "Dockerfile.webhook.ocp" .
 
 echo "## push operator image"
 podman push --authfile=${INTERNAL_REGISTRY_SECRET} ${SRIOV_NETWORK_OPERATOR_IMAGE}

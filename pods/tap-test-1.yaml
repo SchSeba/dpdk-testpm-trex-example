@@ -1,0 +1,101 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "sriov-network-1",
+       "namespace": "seba"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "true"
+  labels:
+    app: dpdk
+  name: iperf
+  namespace: seba
+spec:
+  #  hostNetwork: true
+  runtimeClassName: performance-performance
+  #  securityContext:
+  #    fsGroup: 2002
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/schseba/dpdk:with_iperf
+      imagePullPolicy: Always
+      name: dpdk
+      securityContext:
+        #        privileged: true
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW #for mlx only
+            - NET_ADMIN
+        runAsUser: 0 #for root container
+  terminationGracePeriodSeconds: 2
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "dpdk-network-1",
+       "namespace": "seba"
+      },
+      {
+       "name": "tap",
+       "namespace": "seba",
+       "interface": "ext0"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "true"
+  labels:
+    app: dpdk
+  name: tap
+  namespace: seba
+spec:
+  #  hostNetwork: true
+  runtimeClassName: performance-performance
+#  securityContext:
+#    fsGroup: 2002
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/schseba/dpdk:with_iperf
+      imagePullPolicy: Always
+      name: dpdk
+      resources:
+        limits:
+          cpu: "4"
+          hugepages-1Gi: 4Gi
+          memory: 2Gi
+        requests:
+          cpu: "4"
+          hugepages-1Gi: 4Gi
+          memory: 2Gi
+      securityContext:
+        #        privileged: true
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW #for mlx only
+            - NET_ADMIN
+        runAsUser: 0 #for root container
+#        runAsUser: 1001
+#        runAsGroup: 2001
+      volumeMounts:
+        - mountPath: /mnt/huge
+          name: hugepages
+  terminationGracePeriodSeconds: 2
+  volumes:
+    - emptyDir:
+        medium: HugePages
+      name: hugepages

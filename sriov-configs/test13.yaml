@@ -6,12 +6,29 @@ metadata:
 spec:
   deviceType: netdevice
   nicSelector:
-    pfNames: ["eno2np1"]
+    pfNames: ["eno2np1#0-4"]
   nodeSelector:
     kubernetes.io/hostname: cnfdt4.lab.eng.tlv2.redhat.com
-  numVfs: 5
+  numVfs: 10
   priority: 99
   resourceName: sriov_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: dpdk-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  needVhostNet: true
+  isRdma: true
+  nicSelector:
+    pfNames: ["eno2np1#5-9"]
+  nodeSelector:
+    kubernetes.io/hostname: cnfdt4.lab.eng.tlv2.redhat.com
+  numVfs: 10
+  priority: 99
+  resourceName: dpdk_nic_1
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
@@ -25,3 +42,15 @@ spec:
   spoofChk: "on"
   trust: "on"
   resourceName: sriov_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{}'
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_1
