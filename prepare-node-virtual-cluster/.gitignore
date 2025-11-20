@@ -1,0 +1,29 @@
+# Ansible secrets and sensitive data
+secrets.yml
+**/openshift_pull.json
+
+# Ansible retry files
+*.retry
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temporary files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+
+# Vault password files
+.vault_pass
+vault_pass.txt
+

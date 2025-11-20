@@ -1,8 +1,18 @@
 ---
 - name: Prepare Server for virtual clusters
   hosts: hypervisors
-  become: yes  # This allows you to run commands with sudo
-  gather_facts: no
+  become: yes
+  gather_facts: yes
+
+  vars:
+    runner_user: "github-runner"
+    runner_group: "github-runner"
+    
+  handlers:
+    - name: restart libvirtd
+      service:
+        name: libvirtd
+        state: restarted
 
   tasks:
     - name: Install epel packages
@@ -60,86 +70,224 @@
       command: ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
       when: key_file.stat.exists == False
 
-    - name: Disable SELinux by setting SELINUX to disabled
+    - name: Set SELinux to permissive mode (more secure than disabled)
       lineinfile:
         path: /etc/selinux/config
         regexp: '^SELINUX='
-        line: 'SELINUX=disabled'
+        line: 'SELINUX=permissive'
+        backup: yes
       register: selinux
 
-    - name: set selinux enforce 0 if the file was changed (to avoid reboot on first run)
+    - name: Set SELinux to permissive mode immediately
       command: setenforce 0
       when: selinux.changed == True
+      failed_when: false  # Ignore errors if already in permissive mode
 
-    - name: Ensure the service is enabled
+    - name: Ensure libvirtd service is enabled and started
       service:
         name: libvirtd
         enabled: yes
         state: started
 
-    - name: get go
-      get_url:
-        url: "https://go.dev/dl/go1.21.3.linux-amd64.tar.gz"  # Specify the remote file path
-        dest: /root/go1.21.3.linux-amd64.tar.gz  # Specify the local directory where the file will be copied
+    - name: Wait for libvirtd to be fully ready
+      pause:
+        seconds: 5
 
-    - name: delete old versions of go
+    - name: Check if default libvirt storage pool exists
+      command: virsh pool-info {{ libvirt_default_pool_name }}
+      register: default_pool_check
+      failed_when: false
+      changed_when: false
+
+    - name: Create default storage pool directory
       file:
-        path: rm -rf /usr/local/go
-        state: absent
+        path: "{{ libvirt_default_pool_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0711'
+      when: default_pool_check.rc != 0
 
-    - name: extract go version
-      command: tar -C /usr/local -xzf /root/go1.21.3.linux-amd64.tar.gz
+    - name: Define default libvirt storage pool
+      command: >
+        virsh pool-define-as {{ libvirt_default_pool_name }} dir
+        --source-format auto
+        --target {{ libvirt_default_pool_path }}
+      when: default_pool_check.rc != 0
+      register: pool_define
 
-    - name: Add go path to bashrc
-      become: false
-      lineinfile:
-        path: ~/.bashrc
-        line: "export PATH=$PATH:/usr/local/go/bin"
-        create: yes  # Add the line if it doesn't exist
+    - name: Build default storage pool
+      command: virsh pool-build {{ libvirt_default_pool_name }}
+      when: default_pool_check.rc != 0 and pool_define is changed
 
+    - name: Start default storage pool
+      command: virsh pool-start {{ libvirt_default_pool_name }}
+      when: default_pool_check.rc != 0
+      register: pool_start
 
-    - name: Add user local bin path to bashrc
-      become: false
-      lineinfile:
-        path: ~/.bashrc
-        line: "export PATH=$PATH:/usr/local/bin"
-        create: yes  # Add the line if it doesn't exist
+    - name: Enable autostart for default storage pool
+      command: virsh pool-autostart {{ libvirt_default_pool_name }}
+      when: default_pool_check.rc != 0 and pool_start is changed
 
-    - name: clone qemu repo
+    - name: Check if existing pool is active
+      shell: virsh pool-list | grep -w {{ libvirt_default_pool_name }}
+      register: pool_active_check
+      failed_when: false
+      changed_when: false
+      when: default_pool_check.rc == 0
+
+    - name: Start existing but inactive pool
+      command: virsh pool-start {{ libvirt_default_pool_name }}
+      when: 
+        - default_pool_check.rc == 0
+        - pool_active_check.rc != 0
+      failed_when: false
+
+    - name: Ensure existing pool has autostart enabled
+      command: virsh pool-autostart {{ libvirt_default_pool_name }}
+      when: default_pool_check.rc == 0
+      failed_when: false
+
+    - name: Refresh storage pool
+      command: virsh pool-refresh {{ libvirt_default_pool_name }}
+      changed_when: false
+      failed_when: false
+
+    - name: Set ACL permissions for github-runner on libvirt images directory
+      acl:
+        path: "{{ libvirt_default_pool_path }}"
+        entity: "{{ runner_user }}"
+        etype: user
+        permissions: rwx
+        state: present
+
+    - name: Set default ACL for github-runner on libvirt images directory
+      acl:
+        path: "{{ libvirt_default_pool_path }}"
+        entity: "{{ runner_user }}"
+        etype: user
+        permissions: rwx
+        default: yes
+        state: present
+
+    - name: Verify default storage pool is active
+      command: virsh pool-list --all
+      register: pool_list
+      changed_when: false
+
+    - name: Display storage pool status
+      debug:
+        msg: 
+          - "Libvirt Storage Pools:"
+          - "{{ pool_list.stdout_lines }}"
+      when: pool_list is defined
+
+    - name: Check if Go is already installed
+      command: /usr/local/go/bin/go version
+      register: go_installed
+      failed_when: false
+      changed_when: false
+
+    - name: Download Go
       get_url:
-        url: https://download.qemu.org/qemu-8.2.0.tar.xz
-        dest: /root/qemu-8.2.0.tar.xz
+        url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+        mode: '0644'
+        timeout: 300
+      when: go_installed.rc != 0 or go_version not in go_installed.stdout
+      retries: 3
+      delay: 10
+      register: go_download
+      until: go_download is succeeded
 
-    - name: extract qemu from tar
-      command: tar xvJf /root/qemu-8.2.0.tar.xz
-      args:
-        chdir: /root/
+    - name: Remove old Go installation
+      file:
+        path: /usr/local/go
+        state: absent
+      when: go_download is changed
 
-    - name: install ninja
+    - name: Extract Go
+      unarchive:
+        src: "/tmp/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: /usr/local
+        remote_src: yes
+      when: go_download is changed
+
+    - name: Add Go path to system-wide profile
+      copy:
+        dest: /etc/profile.d/go.sh
+        content: |
+          export PATH=$PATH:/usr/local/go/bin
+          export PATH=$PATH:/usr/local/bin
+        mode: '0644'
+
+    - name: Check if QEMU is already installed with correct version
+      command: /usr/local/bin/qemu-system-x86_64 --version
+      register: qemu_installed
+      failed_when: false
+      changed_when: false
+
+    - name: Download QEMU source
+      get_url:
+        url: "https://download.qemu.org/qemu-{{ qemu_version }}.tar.xz"
+        dest: "/tmp/qemu-{{ qemu_version }}.tar.xz"
+        mode: '0644'
+        timeout: 300
+      when: qemu_installed.rc != 0 or qemu_version not in qemu_installed.stdout
+      retries: 3
+      delay: 10
+      register: qemu_download
+      until: qemu_download is succeeded
+
+    - name: Extract QEMU source
+      unarchive:
+        src: "/tmp/qemu-{{ qemu_version }}.tar.xz"
+        dest: /tmp/
+        remote_src: yes
+      when: qemu_download is changed
+
+    - name: Install Python dependencies for QEMU build
       pip:
-        name: ninja
+        name:
+          - ninja
+          - tomli
+        state: present
+      when: qemu_download is changed
 
-    - name: Create symbolic link
+    - name: Create ninja symbolic link
       file:
         src: "/usr/local/bin/ninja"
         dest: "/usr/bin/ninja"
         state: link
+        force: yes
+      when: qemu_download is changed
 
-    - name: configure qemu
+    - name: Configure QEMU
       command: ./configure --enable-debug --prefix=/usr/local
       args:
-        chdir: /root/qemu-8.2.0
+        chdir: "/tmp/qemu-{{ qemu_version }}"
+        creates: "/tmp/qemu-{{ qemu_version }}/build/config.status"
+      when: qemu_download is changed
 
-    - name: make qemu
-      command: make -j
+    - name: Build QEMU
+      command: make -j{{ ansible_processor_vcpus }}
       args:
-        chdir: /root/qemu-8.2.0
-        executable: /bin/bash
+        chdir: "/tmp/qemu-{{ qemu_version }}"
+      when: qemu_download is changed
+      async: 3600  # 1 hour timeout
+      poll: 30
 
-    - name: make install
+    - name: Install QEMU
       command: make install
       args:
-        chdir: /root/qemu-8.2.0
+        chdir: "/tmp/qemu-{{ qemu_version }}"
+      when: qemu_download is changed
+
+    - name: Cleanup QEMU build directory
+      file:
+        path: "/tmp/qemu-{{ qemu_version }}"
+        state: absent
+      when: qemu_download is changed
 
     - name: enable kcli copr
       community.general.copr:
@@ -150,24 +298,183 @@
       package:
         name: kcli
 
-    - name: install kubectl
-      ansible.builtin.get_url:
-        url: https://dl.k8s.io/release/v1.29.1/bin/linux/amd64/kubectl
-        dest: /bin/kubectl
-        mode: '0770'
+    - name: Install kubectl
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+        timeout: 300
+      retries: 3
+      delay: 10
+      register: kubectl_download
+      until: kubectl_download is succeeded
 
-    - name: Copy podman images short name
-      ansible.builtin.copy:
+    - name: Verify kubectl installation
+      command: kubectl version --client
+      changed_when: false
+
+    - name: Copy podman images short name configuration
+      copy:
         src: 'files/001-shortnames.conf'
         dest: /etc/containers/registries.conf.d/001-shortnames.conf
+        owner: root
+        group: root
+        mode: '0644'
+        backup: yes
 
-    - name: Copy openshift pull secret
-      ansible.builtin.copy:
-        src: 'files/openshift_pull.json'
-        dest: /root/openshift_pull.json
+    - name: Create openshift pull secret from variable
+      copy:
+        content: "{{ openshift_pull_secret }}"
+        dest: "/home/{{ runner_user }}/openshift_pull.json"
+        owner: "{{ runner_user }}"
+        group: "{{ runner_group }}"
+        mode: '0600'
+        backup: yes
+      when: openshift_pull_secret is defined
+      no_log: true  # Don't log secrets
 
-    - name: "create job for podman system prune"
-      ansible.builtin.cron:
-        name: "run podman system prune"
+    - name: Create GitHub runner user
+      user:
+        name: "{{ runner_user }}"
+        comment: "GitHub Actions Runner"
+        system: yes
+        shell: /bin/bash
+        create_home: yes
+        home: "/home/{{ runner_user }}"
+
+    - name: Add runner user to libvirt group
+      user:
+        name: "{{ runner_user }}"
+        groups: libvirt
+        append: yes
+
+    - name: Configure subuid for github-runner (required for podman)
+      lineinfile:
+        path: /etc/subuid
+        line: "{{ runner_user }}:100000:65536"
+        create: yes
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Configure subgid for github-runner (required for podman)
+      lineinfile:
+        path: /etc/subgid
+        line: "{{ runner_user }}:100000:65536"
+        create: yes
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable lingering for github-runner (required for podman systemd)
+      command: loginctl enable-linger {{ runner_user }}
+      changed_when: false
+      failed_when: false
+
+    - name: Run podman system migrate for github-runner
+      command: podman system migrate
+      become_user: "{{ runner_user }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Create sudoers file for github-runner with NOPASSWD
+      copy:
+        dest: /etc/sudoers.d/github-runner
+        content: |
+          # Allow github-runner full sudo access without password for CI/CD
+          # This is a dedicated CI/CD runner in an isolated environment
+          Defaults:{{ runner_user }} !requiretty
+          Defaults:{{ runner_user }} !lecture
+          {{ runner_user }} ALL=(ALL) NOPASSWD: ALL
+        owner: root
+        group: root
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Create .ssh directory for runner user
+      file:
+        path: "/home/{{ runner_user }}/.ssh"
+        state: directory
+        owner: "{{ runner_user }}"
+        group: "{{ runner_group }}"
+        mode: '0700'
+
+    - name: Check if SSH key exists for runner user
+      stat:
+        path: "/home/{{ runner_user }}/.ssh/id_rsa"
+      register: runner_key_file
+
+    - name: Generate SSH key for runner user
+      command: ssh-keygen -t rsa -b 4096 -f /home/{{ runner_user }}/.ssh/id_rsa -N '' -C "{{ runner_user }}@{{ ansible_hostname }}"
+      become_user: "{{ runner_user }}"
+      when: not runner_key_file.stat.exists
+
+    - name: Ensure correct permissions on runner SSH key files
+      file:
+        path: "/home/{{ runner_user }}/.ssh/{{ item.name }}"
+        owner: "{{ runner_user }}"
+        group: "{{ runner_group }}"
+        mode: "{{ item.mode }}"
+        state: file
+      loop:
+        - { name: 'id_rsa', mode: '0600' }
+        - { name: 'id_rsa.pub', mode: '0644' }
+      failed_when: false  # Files might not exist yet on first run
+
+    - name: Find all GitHub runner services
+      find:
+        paths: /etc/systemd/system
+        patterns: 'actions.runner.*.service'
+        file_type: file
+      register: runner_services
+      tags: ['runners']
+
+    - name: Stop GitHub runner services before environment changes
+      systemd:
+        name: "{{ item.path | basename }}"
+        state: stopped
+      loop: "{{ runner_services.files }}"
+      when: runner_services.files | length > 0
+      ignore_errors: yes  # Service might not exist yet
+      tags: ['runners']
+
+    - name: Reload systemd daemon to ensure all changes are applied
+      systemd:
+        daemon_reload: yes
+      when: runner_services.files | length > 0
+      tags: ['runners']
+
+    - name: Start GitHub runner services with correct environment
+      systemd:
+        name: "{{ item.path | basename }}"
+        state: started
+      loop: "{{ runner_services.files }}"
+      when: runner_services.files | length > 0
+      ignore_errors: yes
+      tags: ['runners']
+
+    - name: Wait for runner services to fully initialize
+      pause:
+        seconds: 5
+      when: runner_services.files | length > 0
+      tags: ['runners']
+
+    - name: Cleanup old build artifacts from /tmp
+      shell: |
+        find /tmp -type f \( -name 'qemu-*.tar.xz' -o -name 'go*.tar.gz' -o -name 'actions-runner-*.tar.gz' \) -mtime +7 -delete
+      register: cleanup_result
+      changed_when: cleanup_result.rc == 0
+      failed_when: false
+
+    - name: Run podman system prune
+      command: /usr/bin/podman system prune -f --all
+      register: podman_prune
+      changed_when: podman_prune.stdout is search('Total reclaimed space')
+      failed_when: false
+
+    - name: Create cron job for podman system prune
+      cron:
+        name: "Podman system prune"
         special_time: "daily"
-        job: "podman system prune -f"
+        job: "/usr/bin/podman system prune -f --all"
+        user: root

@@ -1,6 +1,9 @@
-LANG=en_US.UTF-8
-CLUSTER_NAME={{item.name}}-{{uid}}
-VIRTUAL_ROUTER_ID={{item.id}}
-API_IP={{item.subnet}}.{{item.id}}
-GOCACHE=/root/{{item.name}}-{{uid}}/data/_temp/
-GOMODCACHE=/root/{{item.name}}-{{uid}}/data/_temp/
+export LANG=en_US.UTF-8
+export PATH=/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+export CLUSTER_NAME={{item.name}}-{{uid}}
+export VIRTUAL_ROUTER_ID={{item.id}}
+export API_IP={{item.subnet}}.{{item.id}}
+export GOCACHE=/home/github-runner/runners/{{item.name}}-{{uid}}/data/_temp/
+export GOMODCACHE=/home/github-runner/runners/{{item.name}}-{{uid}}/data/_temp/
+export HOME=/home/github-runner
+export KCLI_CONFIG=/home/github-runner/.kcli/config.yml
