@@ -221,6 +221,12 @@
           export PATH=$PATH:/usr/local/bin
         mode: '0644'
 
+    - name: Create symbolic link for Go binary
+      file:
+        src: /usr/local/go/bin/go
+        dest: /usr/bin/go
+        state: link
+
     - name: Check if QEMU is already installed with correct version
       command: /usr/local/bin/qemu-system-x86_64 --version
       register: qemu_installed

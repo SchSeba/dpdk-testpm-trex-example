@@ -1,0 +1,14 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: sriov-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci  
+  nicSelector:
+    netFilter: "aws/NetworkID:0030d82d35946739b"
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  numVfs: 1
+  priority: 99
+  resourceName: sriov_nic_1
