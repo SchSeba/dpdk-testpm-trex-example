@@ -319,6 +319,46 @@
       command: kubectl version --client
       changed_when: false
 
+    - name: Create script to list nodes in all clusters
+      copy:
+        dest: "/usr/bin/list-all-cluster-nodes.sh"
+        owner: root
+        group: root
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          
+          for kubeconfig in /home/github-runner/.kcli/clusters/*/auth/kubeconfig; do
+              [[ -f "$kubeconfig" ]] || continue
+              echo "--- ${kubeconfig} ---"
+              KUBECONFIG="$kubeconfig" kubectl get node
+              echo
+          done
+
+    - name: Create MOTD (Message of the Day) for SSH login
+      copy:
+        dest: /etc/motd
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          ================================================================================
+          
+                    Upstream CI System Node for SR-IOV Related Project
+          
+          ================================================================================
+          
+          This server is part of the automated CI/CD infrastructure for SR-IOV
+          networking development and testing.
+          
+          To view the status of all CI clusters, run:
+          
+              list-all-cluster-nodes.sh
+          
+          This will display the nodes for all OpenShift clusters managed by kcli.
+          
+          ================================================================================
+
     - name: Copy podman images short name configuration
       copy:
         src: 'files/001-shortnames.conf'

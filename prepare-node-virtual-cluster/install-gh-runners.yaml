@@ -5,7 +5,7 @@
   gather_facts: yes
 
   vars:
-    runner_version: "2.329.0"
+    runner_version: "2.330.0"
     runner_user: "github-runner"
     runner_base_dir: "/home/{{ runner_user }}/runners"
     runner_archive: "actions-runner-linux-x64-{{ runner_version }}.tar.gz"
