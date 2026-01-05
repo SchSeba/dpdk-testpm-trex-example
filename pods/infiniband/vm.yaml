@@ -1,0 +1,51 @@
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: vm-fedora
+  name: vm-fedora
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm-fedora
+    spec:
+      domain:
+        cpu:
+          sockets: 2
+          cores: 1
+          threads: 1
+        memory:
+          guest: 1G 
+        devices:
+          interfaces:
+            - name: default
+              masquerade: {}
+            - name: sec
+              sriov: {}
+          disks:
+          - disk:
+              bus: virtio
+            name: containerdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+      terminationGracePeriodSeconds: 0
+      networks:
+        - name: default
+          pod: {}
+        - name: sec
+          multus:
+            networkName: ib-vfio-network-1
+      volumes:
+      - containerDisk:
+          image: quay.io/kubevirt/fedora-with-test-tooling-container-disk:20260112_dc3dc8356a
+        name: containerdisk
+      - cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            password: fedora
+            chpasswd: { expire: False }
+        name: cloudinitdisk

@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "ib-network-1",
+       "namespace": "seba"
+      }
+    ]'
+  labels:
+    app: infiniband-client
+  name: infiniband-client
+  namespace: seba
+spec:
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      image: quay.io/cloud-bulldozer/k8s-netperf:latest
+      imagePullPolicy: Always
+      name: netperf
+      resources:
+        limits:
+          cpu: "2"
+          memory: 1Gi
+        requests:
+          cpu: "2"
+          memory: 1Gi
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+            - NET_RAW
+  terminationGracePeriodSeconds: 2
