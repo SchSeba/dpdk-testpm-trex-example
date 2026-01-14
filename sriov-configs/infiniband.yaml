@@ -1,0 +1,72 @@
+# this policy is need so we switch the interface to infiniband
+# but after that the interface name changes from ens4f0np0 to ibs4f0 so we create the real policy for the new interface
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: temp-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  linkType: IB
+  isRdma: true
+  nicSelector:
+    pfNames: ["ens4f0np0"]
+  nodeSelector:
+    kubernetes.io/hostname: cnfdd8.t5g-dev.eng.rdu2.dc.redhat.com
+  numVfs: 16
+  priority: 99
+  resourceName: temp_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: ib-vfio-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci
+  linkType: IB
+  nicSelector:
+    pfNames: ["ibs4f0#0-9"]
+  nodeSelector:
+    kubernetes.io/hostname: cnfdd8.t5g-dev.eng.rdu2.dc.redhat.com
+  numVfs: 16
+  priority: 99
+  resourceName: ib_vfio_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: ib-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  isRdma: true
+  linkType: IB
+  nicSelector:
+    pfNames: ["ibs4f0#10-15"]
+  nodeSelector:
+    kubernetes.io/hostname: cnfdd8.t5g-dev.eng.rdu2.dc.redhat.com
+  numVfs: 16
+  priority: 99
+  resourceName: ib_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovIBNetwork
+metadata:
+  name: ib-vfio-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{}'
+  networkNamespace: seba
+  resourceName: ib_vfio_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovIBNetwork
+metadata:
+  name: ib-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{}'
+  networkNamespace: seba
+  resourceName: ib_nic_1

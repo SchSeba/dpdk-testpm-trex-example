@@ -315,6 +315,13 @@
       register: kubectl_download
       until: kubectl_download is succeeded
 
+    - name: Create symbolic link for kubectl binary
+      file:
+        src: /usr/local/bin/kubectl
+        dest: /bin/kubectl
+        state: link
+        mode: '0777'
+
     - name: Verify kubectl installation
       command: kubectl version --client
       changed_when: false
