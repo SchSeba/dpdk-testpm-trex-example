@@ -1,0 +1,21 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 99-worker-e810-pf-config
+spec:
+  kernelArguments:
+    # Replace 0000:XX:00.0 with the actual PCI address of the E810 PF
+    - devlink.param/pci/0000:XX:00.0/msix_vec_per_pf_max=128
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: /etc/udev/rules.d/99-intel-e810-pf-channels.rules
+          mode: 0644
+          overwrite: true
+          contents:
+            # ACTION=="add", SUBSYSTEM=="net", DRIVERS=="ice", RUN+="/usr/sbin/ethtool -L %k combined 32"
+            source: data:text/plain;charset=utf-8;base64,QUNUSU9OPT0iYWRkIiwgU1VCU1lTVEVNPT0ibmV0IiwgRFJJVkVSUz09ImljZSIsIFJVTis9Ii91c3Ivc2Jpbi9ldGh0b29sIC1MICVrIGNvbWJpbmVkIDMyIgo=

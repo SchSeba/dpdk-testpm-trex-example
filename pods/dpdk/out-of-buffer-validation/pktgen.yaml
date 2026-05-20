@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pktgen-helper-scripts
+  namespace: seba
+data:
+  run-pktgen.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    DEVICE0="${1:-${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1:-}}"
+    DEVICE1="${2:-${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_2:-}}"
+    if [ -z "${DEVICE0}" ] || [ -z "${DEVICE1}" ]; then
+      echo "Missing PCI devices. Pass both explicitly or rely on PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1/2."
+      exit 1
+    fi
+
+    CPU_LIST="$(cat /sys/fs/cgroup/cpuset.cpus)"
+    mapfile -t CORES < <(python3 - "${CPU_LIST}" <<'PY'
+    import sys
+
+    spec = sys.argv[1]
+    cores = []
+    for chunk in spec.split(','):
+        if '-' in chunk:
+            start, end = chunk.split('-', 1)
+            cores.extend(range(int(start), int(end) + 1))
+        else:
+            cores.append(int(chunk))
+
+    for core in cores:
+        print(core)
+    PY
+    )
+
+    if [ "${#CORES[@]}" -lt 5 ]; then
+      echo "Pktgen needs at least 5 CPUs in the cpuset for a two-port mapping, found ${#CORES[@]}."
+      exit 1
+    fi
+
+    MAIN_CORE="${CORES[0]}"
+    RX_CORE="${CORES[1]}"
+    RX_CORE_1="${CORES[2]}"
+    TX_CORE="${CORES[3]}"
+    TX_CORE_1="${CORES[4]}"
+
+    echo "Using lcores ${MAIN_CORE},${RX_CORE},${RX_CORE_1},${TX_CORE},${TX_CORE_1} for pktgen on ${DEVICE0} and ${DEVICE1}"
+    exec pktgen -l "${MAIN_CORE},${RX_CORE},${RX_CORE_1},${TX_CORE},${TX_CORE_1}" -n 4 -a "${DEVICE0}" -a "${DEVICE1}" -- -T -P -m "[${RX_CORE}:${TX_CORE}].0" -m "[${RX_CORE_1}:${TX_CORE_1}].1"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "dpdk-network-1",
+       "mac": "50:00:00:00:00:11",
+       "namespace": "seba"
+      },
+      {
+       "name": "dpdk-network-2",
+       "mac": "50:00:00:00:00:12",
+       "namespace": "seba"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "disable"
+    cpu-quota.crio.io: "disable"
+    irq-load-balancing.crio.io: "disable"
+  labels:
+    app: pktgen
+    scenario: pktgen-testpmd
+  name: pktgen
+  namespace: seba
+spec:
+  runtimeClassName: performance-performance
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: scenario
+                operator: In
+                values:
+                  - pktgen-testpmd
+          topologyKey: kubernetes.io/hostname
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      env:
+        - name: PKTGEN_PORT0_MAC
+          value: "50:00:00:00:00:11"
+        - name: PKTGEN_PORT1_MAC
+          value: "50:00:00:00:00:12"
+        - name: TESTPMD_PORT0_MAC
+          value: "60:00:00:00:00:11"
+        - name: TESTPMD_PORT1_MAC
+          value: "60:00:00:00:00:12"
+      image: quay.io/schseba/pktgen-dpdk:latest
+      imagePullPolicy: Always
+      name: pktgen
+      resources:
+        limits:
+          cpu: "6"
+          hugepages-1Gi: 2Gi
+          memory: 2Gi
+        requests:
+          cpu: "6"
+          hugepages-1Gi: 2Gi
+          memory: 2Gi
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW
+            - NET_ADMIN
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /mnt/huge
+          name: hugepages
+        - mountPath: /opt/scripts
+          name: pktgen-helper-scripts
+  terminationGracePeriodSeconds: 5
+  volumes:
+    - emptyDir:
+        medium: HugePages
+      name: hugepages
+    - configMap:
+        defaultMode: 0755
+        name: pktgen-helper-scripts
+      name: pktgen-helper-scripts

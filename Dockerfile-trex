@@ -1,0 +1,45 @@
+FROM quay.io/centos/centos:stream9
+
+ARG TREX_VERSION=3.08
+ENV TREX_VERSION=${TREX_VERSION}
+
+RUN dnf install -y dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
+    && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf install -y --nodocs \
+        ethtool \
+        gettext \
+        git \
+        htop \
+        hostname \
+        iproute \
+        iputils \
+        libibverbs \
+        libibverbs-devel \
+        net-tools \
+        nmap \
+        numactl \
+        pciutils \
+        perf \
+        procps-ng \
+        python3 \
+        python3-pip \
+        rdma-core-devel \
+        sysstat \
+        tcpdump \
+        vim \
+        wget \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
+
+# TRex uses a site with an incomplete certificate chain, so we mirror the
+# project's existing --no-check-certificate behavior here.
+WORKDIR /opt
+RUN wget --no-check-certificate https://trex-tgn.cisco.com/trex/release/v${TREX_VERSION}.tar.gz \
+    && tar -xzf v${TREX_VERSION}.tar.gz \
+    && mv v${TREX_VERSION} trex \
+    && rm v${TREX_VERSION}.tar.gz
+
+COPY scripts /opt/scripts
+
+WORKDIR /opt/trex

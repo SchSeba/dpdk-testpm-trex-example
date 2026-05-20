@@ -1,5 +1,5 @@
 set -ex
-export CPU=$(cat /sys/fs/cgroup/cpuset/cpuset.cpus)
+export CPU=$(cat /sys/fs/cgroup/cpuset.cpus)
 echo ${CPU}
 
 IFS="," read -ra arr <<< $CPU

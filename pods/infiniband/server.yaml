@@ -5,7 +5,7 @@ metadata:
   annotations:
     k8s.v1.cni.cncf.io/networks: '[
       {
-       "name": "dpdk-network-1",
+       "name": "ib-network-2",
        "namespace": "seba"
       }
     ]'
@@ -18,7 +18,9 @@ spec:
     - command:
         - /bin/bash
         - -c
-        - sleep INF
+        - |
+          dnf install -y perftest infiniband-diags rdma-core libibverbs-utils
+          sleep INF
       image: quay.io/cloud-bulldozer/k8s-netperf:latest
       imagePullPolicy: Always
       name: netperf
@@ -26,12 +28,15 @@ spec:
         limits:
           cpu: "2"
           memory: 1Gi
+          openshift.io/ib_nic_2: "1"  # Request IB VF from ib_nic_2 resource pool
         requests:
           cpu: "2"
           memory: 1Gi
+          openshift.io/ib_nic_2: "1"
       securityContext:
         capabilities:
           add:
             - IPC_LOCK
             - NET_RAW
+            - NET_ADMIN
   terminationGracePeriodSeconds: 2

@@ -1,52 +1,61 @@
-FROM quay.io/centos/centos:8
+FROM quay.io/centos/centos:stream9
 
 LABEL maintainer="Sebastian Scheinkman <sebassch@gmail.com>"
 
-ARG DPDK_VER=20.11.3
-ENV DPDK_VER ${DPDK_VER}
-ENV DPDK_DIR /usr/src/dpdk-stable-${DPDK_VER}
-ENV RTE_TARGET=x86_64-native-linuxapp-gcc
-ENV RTE_SDK=${DPDK_DIR}
-ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig/
+ARG DPDK_VER=24.11.4
+ENV DPDK_VER=${DPDK_VER}
+ENV DPDK_DIR=/usr/src/dpdk-stable-${DPDK_VER}
+ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
 
-RUN dnf install dnf-plugins-core -y && dnf config-manager --set-enabled powertools && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+RUN dnf install -y dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
+    && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf install -y \
+        diffutils \
+        ethtool \
+        expect \
+        gcc \
+        gcc-c++ \
+        git \
+        htop \
+        iproute \
+        libibverbs \
+        libibverbs-devel \
+        logrotate \
+        lua \
+        make \
+        meson \
+        net-tools \
+        ninja-build \
+        numactl \
+        numactl-devel \
+        patch \
+        perf \
+        pkgconf-pkg-config \
+        python3 \
+        python3-pip \
+        readline-devel \
+        sysstat \
+        tcpdump \
+        wget \
+        which \
+        xz \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
-# The second dnf install is here to overcome versions mismatch between rpms
-RUN dnf install -y wget python3\
- numactl \
- numactl-devel \
- make \
- logrotate \
- ethtool \
- patch \
- which \
- readline-devel \
- iproute \
- libibverbs \
- lua \
- git \
- gcc \
- expect \
- sysstat \
- htop \
- net-tools \
- libibverbs-devel \
- perf \
- tcpdump && \
- dnf clean all
+RUN pip3 install --no-cache-dir pyelftools
 
-RUN pip3 install meson ninja
-
-RUN cd /usr/src/ && wget http://fast.dpdk.org/rel/dpdk-${DPDK_VER}.tar.xz && tar -xpvf dpdk-${DPDK_VER}.tar.xz && rm dpdk-${DPDK_VER}.tar.xz && \
-    cd dpdk-stable-${DPDK_VER} && \
-    meson build && \
-    cd build  && \
-    meson configure -Denable_docs=false -Dbuildtype=debug && \
-    ninja && \
-    ninja install && \
-    echo "/usr/local/lib64" > /etc/ld.so.conf.d/dpdk.conf && \
-    ldconfig
+RUN cd /usr/src \
+    && wget https://fast.dpdk.org/rel/dpdk-${DPDK_VER}.tar.xz \
+    && tar -xpf dpdk-${DPDK_VER}.tar.xz \
+    && rm dpdk-${DPDK_VER}.tar.xz \
+    && cd ${DPDK_DIR} \
+    && meson setup build -Denable_docs=false -Dbuildtype=release \
+    && meson compile -C build \
+    && meson install -C build \
+    && printf "/usr/local/lib64\n/usr/local/lib\n" > /etc/ld.so.conf.d/dpdk.conf \
+    && ldconfig
 
 COPY scripts/* /usr/bin/
 
-WORKDIR /usr/src/dpdk-stable-${DPDK_VER}
+WORKDIR ${DPDK_DIR}

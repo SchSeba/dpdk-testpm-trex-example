@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: testpmd-helper-scripts
+  namespace: seba
+data:
+  run-testpmd-mac.sh: |
+    #!/bin/bash
+    set -euo pipefail
+
+    DEVICE0="${1:-${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1:-}}"
+    DEVICE1="${2:-${PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_2:-}}"
+    PEER0="${3:-${PKTGEN_PORT0_MAC:-}}"
+    PEER1="${4:-${PKTGEN_PORT1_MAC:-}}"
+    if [ -z "${DEVICE0}" ] || [ -z "${DEVICE1}" ]; then
+      echo "Missing PCI devices. Pass both explicitly or rely on PCIDEVICE_OPENSHIFT_IO_DPDK_NIC_1/2."
+      exit 1
+    fi
+
+    CPU_LIST="$(cat /sys/fs/cgroup/cpuset/cpuset.cpus)"
+    echo "Using lcores ${CPU_LIST} for testpmd on ${DEVICE0} and ${DEVICE1}"
+
+    if [ -z "${PEER0}" ] || [ -z "${PEER1}" ]; then
+      echo "Missing peer MACs. Pass both explicitly or rely on PKTGEN_PORT0_MAC/PKTGEN_PORT1_MAC."
+      exit 1
+    fi
+
+    exec dpdk-testpmd -l "${CPU_LIST}" -a "${DEVICE0}" -a "${DEVICE1}" -n 4 -- -i --nb-cores=2 --rxq=2 --txq=2 --rxd=1024 --txd=1024 --forward-mode=mac --eth-peer=0,${PEER0} --eth-peer=1,${PEER1}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/networks: '[
+      {
+       "name": "dpdk-network-1",
+       "mac": "60:00:00:00:00:11",
+       "namespace": "seba"
+      },
+      {
+       "name": "dpdk-network-2",
+       "mac": "60:00:00:00:00:12",
+       "namespace": "seba"
+      }
+    ]'
+    cpu-load-balancing.crio.io: "disable"
+    cpu-quota.crio.io: "disable"
+    irq-load-balancing.crio.io: "disable"
+  labels:
+    app: dpdk
+    role: testpmd
+    scenario: pktgen-testpmd
+  name: testpmd
+  namespace: seba
+spec:
+  runtimeClassName: performance-performance
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: scenario
+                operator: In
+                values:
+                  - pktgen-testpmd
+          topologyKey: kubernetes.io/hostname
+  containers:
+    - command:
+        - /bin/bash
+        - -c
+        - sleep INF
+      env:
+        - name: TESTPMD_PORT0_MAC
+          value: "60:00:00:00:00:11"
+        - name: TESTPMD_PORT1_MAC
+          value: "60:00:00:00:00:12"
+        - name: PKTGEN_PORT0_MAC
+          value: "50:00:00:00:00:11"
+        - name: PKTGEN_PORT1_MAC
+          value: "50:00:00:00:00:12"
+      image: quay.io/schseba/dpdk:latest
+      imagePullPolicy: Always
+      name: dpdk
+      resources:
+        limits:
+          cpu: "6"
+          hugepages-1Gi: 2Gi
+          memory: 2Gi
+        requests:
+          cpu: "6"
+          hugepages-1Gi: 2Gi
+          memory: 2Gi
+      securityContext:
+        capabilities:
+          add:
+            - IPC_LOCK
+            - SYS_RESOURCE
+            - NET_RAW
+            - NET_ADMIN
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /mnt/huge
+          name: hugepages
+        - mountPath: /opt/scripts
+          name: testpmd-helper-scripts
+  terminationGracePeriodSeconds: 5
+  volumes:
+    - emptyDir:
+        medium: HugePages
+      name: hugepages
+    - configMap:
+        defaultMode: 0755
+        name: testpmd-helper-scripts
+      name: testpmd-helper-scripts

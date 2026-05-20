@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensm-config
+  namespace: seba
+data:
+  # OpenSM configuration with virtualization support
+  # NOTE: Options like honor_guid2lid, reassign_lids are passed via command line
+  opensm.conf: |
+    # Enable virtualization support for SR-IOV VFs
+    # 0 = disabled, 1 = enabled, 2 = enabled with vport awareness
+    virt_enabled 2
+
+  partitions.conf: |
+    # Default partition for back-to-back setup
+    # mtu=5 means 4096 bytes (IB MTU encoding: 1=256, 2=512, 3=1024, 4=2048, 5=4096)
+    # Note: Don't specify rate to avoid validation issues
+    Default=0x7fff, ipoib, mtu=5:
+    	ALL=full;

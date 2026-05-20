@@ -1,52 +1,49 @@
 FROM quay.io/centos/centos:stream9
 
-LABEL maintainer="Sebastian Scheinkman <sebassch@gmail.com>"
-
 ARG DPDK_VER=24.11.4
-ENV DPDK_VER=${DPDK_VER}
-ENV DPDK_DIR=/usr/src/dpdk-stable-${DPDK_VER}
-ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
+ARG PKTGEN_VER=26.03.0
 
-ARG OVS_VER=3.7.1
-ENV OVS_VER=${OVS_VER}
+ENV DPDK_VER=${DPDK_VER}
+ENV PKTGEN_VER=${PKTGEN_VER}
+ENV DPDK_DIR=/usr/src/dpdk-stable-${DPDK_VER}
+ENV PKTGEN_DIR=/opt/pktgen-dpdk
+ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
 
 RUN dnf install -y dnf-plugins-core \
     && dnf config-manager --set-enabled crb \
     && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
     && dnf install -y \
-        autoconf \
-        automake \
         diffutils \
         ethtool \
-        expect \
         gcc \
         gcc-c++ \
         git \
         htop \
+        hostname \
         iproute \
-        libcap-ng-devel \
+        iputils \
+        libbsd-devel \
         libibverbs \
         libibverbs-devel \
-        libtool \
-        libuuid-devel \
-        logrotate \
-        lua \
+        libpcap-devel \
+        lua-devel \
         make \
         meson \
+        ncurses-devel \
         net-tools \
         ninja-build \
         numactl \
         numactl-devel \
-        openssl-devel \
         patch \
         perf \
         pkgconf-pkg-config \
+        procps-ng \
         python3 \
-        python3-devel \
         python3-pip \
-        readline-devel \
+        rdma-core-devel \
         sysstat \
         tcpdump \
+        vim \
         wget \
         which \
         xz \
@@ -67,15 +64,13 @@ RUN cd /usr/src \
     && ldconfig
 
 RUN cd /opt \
-    && wget https://www.openvswitch.org/releases/openvswitch-${OVS_VER}.tar.gz \
-    && tar -xpf openvswitch-${OVS_VER}.tar.gz \
-    && rm openvswitch-${OVS_VER}.tar.gz \
-    && cd openvswitch-${OVS_VER} \
-    && ./configure --with-dpdk=shared --prefix=/usr --localstatedir=/var --sysconfdir=/etc CFLAGS="-Ofast -msse4.2 -mpopcnt" \
-    && make -j"$(nproc)" \
-    && make install \
-    && ldconfig
+    && wget https://github.com/Pktgen/Pktgen-DPDK/archive/refs/tags/pktgen-${PKTGEN_VER}.tar.gz -O pktgen-${PKTGEN_VER}.tar.gz \
+    && tar -xpf pktgen-${PKTGEN_VER}.tar.gz \
+    && rm pktgen-${PKTGEN_VER}.tar.gz \
+    && mv Pktgen-DPDK-pktgen-${PKTGEN_VER} ${PKTGEN_DIR} \
+    && cd ${PKTGEN_DIR} \
+    && meson setup builddir \
+    && meson compile -C builddir \
+    && ln -sf ${PKTGEN_DIR}/builddir/app/pktgen /usr/local/bin/pktgen
 
-
-WORKDIR /opt/
-COPY scripts /opt/scripts
+WORKDIR ${PKTGEN_DIR}

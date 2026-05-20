@@ -194,22 +194,6 @@
         - "'Failed: error: exists' not in service_install_result.stderr"
       tags: ['service']
 
-    - name: Patch runsvc.sh to source .env file for child processes
-      blockinfile:
-        path: "{{ runner_base_dir }}/{{ item.name }}-{{ uid }}/runsvc.sh"
-        marker: "# {mark} ANSIBLE MANAGED - SOURCE ENV"
-        insertafter: "^#!/bin/bash"
-        block: |
-          # Source .env to make variables available to GitHub Actions workflows
-          if [ -f "{{ runner_base_dir }}/{{ item.name }}-{{ uid }}/.env" ]; then
-              source "{{ runner_base_dir }}/{{ item.name }}-{{ uid }}/.env"
-          fi
-        owner: "{{ runner_user }}"
-        group: "{{ runner_user }}"
-      loop: "{{ configurations }}"
-      register: runsvc_env_patched
-      tags: ['service']
-
     - name: Get systemd service names
       shell: basename $(ls /etc/systemd/system/actions.runner.*{{ item.name }}-{{ uid }}.service 2>/dev/null | head -n1) || echo ""
       loop: "{{ configurations }}"
@@ -232,9 +216,18 @@
       copy:
         dest: "/etc/systemd/system/{{ item.stdout }}.d/override.conf"
         content: |
+          # Managed by Ansible - survives runner auto-updates
+          [Unit]
+          After=tmp.mount systemd-tmpfiles-setup.service
+
           [Service]
+          # Fix .path before every start since runner auto-updates overwrite it
+          ExecStartPre=/bin/bash -c 'echo "/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin" > {{ runner_base_dir }}/{{ item.item.name }}-{{ uid }}/.path'
+          PrivateTmp=no
           Environment="PATH=/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
           Environment="HOME=/home/{{ runner_user }}"
+          Environment="TMPDIR=/tmp"
+          Environment="GOTMPDIR=/tmp"
           EnvironmentFile={{ runner_base_dir }}/{{ item.item.name }}-{{ uid }}/.env
         owner: root
         group: root
@@ -257,13 +250,13 @@
       loop: "{{ service_names.results }}"
       when: 
         - item.stdout != ""
-        - (service_override_created is changed or env_file_updated is changed or runsvc_env_patched is changed)
+        - (service_override_created is changed or env_file_updated is changed)
       tags: ['service']
 
     - name: Wait for runner services to initialize after restart
       pause:
         seconds: 5
-      when: service_override_created is changed or env_file_updated is changed or runsvc_env_patched is changed
+      when: service_override_created is changed or env_file_updated is changed
       tags: ['service']
 
     - name: Ensure runner services are started

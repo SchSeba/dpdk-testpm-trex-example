@@ -15,6 +15,14 @@
         state: restarted
 
   tasks:
+    - name: Ensure /tmp directory exists with correct permissions
+      file:
+        path: /tmp
+        state: directory
+        owner: root
+        group: root
+        mode: '1777'
+
     - name: Install epel packages
       package:
         name: epel-release
@@ -519,15 +527,37 @@
       changed_when: cleanup_result.rc == 0
       failed_when: false
 
-    - name: Run podman system prune
+    - name: Run podman system prune for root
       command: /usr/bin/podman system prune -f --all
       register: podman_prune
       changed_when: podman_prune.stdout is search('Total reclaimed space')
       failed_when: false
 
-    - name: Create cron job for podman system prune
+    - name: Run podman system prune for runner user
+      command: /usr/bin/podman system prune -f --all
+      become_user: "{{ runner_user }}"
+      register: podman_prune_runner
+      changed_when: podman_prune_runner.stdout is search('Total reclaimed space')
+      failed_when: false
+
+    - name: Remove stale buildah containers for runner user
+      shell: |
+        /usr/bin/podman rm -f $(/usr/bin/podman ps -a --external -q) 2>/dev/null || true
+        /usr/bin/podman system prune -f --all
+      become_user: "{{ runner_user }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Create cron job for podman system prune (root)
       cron:
         name: "Podman system prune"
         special_time: "daily"
         job: "/usr/bin/podman system prune -f --all"
         user: root
+
+    - name: Create cron job for podman system prune (runner user)
+      cron:
+        name: "Podman system prune for CI runner"
+        special_time: "daily"
+        job: "/usr/bin/podman rm -f $(/usr/bin/podman ps -a --external -q) 2>/dev/null; /usr/bin/podman system prune -f --all"
+        user: "{{ runner_user }}"

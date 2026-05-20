@@ -1,11 +1,85 @@
-FROM quay.io/centos/centos:8
+FROM quay.io/centos/centos:stream9
 
-# install requirements
-RUN dnf install dnf-plugins-core -y && dnf config-manager --set-enabled powertools && dnf -y install --nodocs git wget procps python3 vim python3-pip pciutils gettext https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && dnf clean all
-RUN dnf install -y --nodocs hostname iproute net-tools ethtool nmap iputils perf numactl sysstat htop rdma-core-devel libibverbs libibverbs-devel net-tools tcpdump && dnf clean all
+ARG VPP_VER=25.06
+ENV VPP_VER=${VPP_VER}
+ENV VPP_DIR=/usr/src/vpp-${VPP_VER}
+ENV VPP_INSTALL_DIR=/opt/vpp
+ENV PATH=${VPP_INSTALL_DIR}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${VPP_INSTALL_DIR}/lib64:${VPP_INSTALL_DIR}/lib
 
-COPY repo/vpp.repo /etc/yum.repos.d/vpp.repo
-RUN dnf install -y vpp vpp-plugins vpp-devel
+COPY scripts/patch-vpp-http-cmakelists.py /usr/local/bin/patch-vpp-http-cmakelists.py
 
-WORKDIR /opt/
+RUN dnf install -y dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
+    && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf groupinstall -y "Development Tools" \
+    && dnf install -y --nodocs \
+        apr-devel \
+        autoconf \
+        automake \
+        ccache \
+        check \
+        check-devel \
+        clang \
+        chrpath \
+        cmake \
+        elfutils-libelf-devel \
+        ethtool \
+        git \
+        glibc-static \
+        htop \
+        hostname \
+        infiniband-diags \
+        iproute \
+        iputils \
+        libffi-devel \
+        libibverbs \
+        libibverbs-devel \
+        libmnl-devel \
+        libnl3-devel \
+        libpcap-devel \
+        libtool \
+        llvm \
+        nasm \
+        net-tools \
+        ninja-build \
+        numactl \
+        numactl-devel \
+        openssl-devel \
+        pciutils \
+        perf \
+        procps-ng \
+        python3 \
+        python3-devel \
+        python3-jsonschema \
+        python3-pip \
+        python3-ply \
+        python3-virtualenv \
+        rdma-core-devel \
+        selinux-policy \
+        selinux-policy-devel \
+        socat \
+        subunit \
+        subunit-devel \
+        sysstat \
+        systemd-devel \
+        tcpdump \
+        vim \
+        wget \
+        xmlto \
+        yum-utils \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
+
+RUN git clone --branch v${VPP_VER} --depth 1 https://github.com/FDio/vpp.git ${VPP_DIR} \
+    && python3 /usr/local/bin/patch-vpp-http-cmakelists.py ${VPP_DIR}/src/plugins/http/CMakeLists.txt
+
+RUN cd ${VPP_DIR} \
+    && make CC=gcc OS_ID=rocky OS_VERSION_ID=9 build-release \
+    && mkdir -p ${VPP_INSTALL_DIR} \
+    && cp -a build-root/install-vpp-native/vpp/. ${VPP_INSTALL_DIR}/ \
+    && printf "%s\n%s\n" "${VPP_INSTALL_DIR}/lib64" "${VPP_INSTALL_DIR}/lib" > /etc/ld.so.conf.d/vpp.conf \
+    && ldconfig
+
+WORKDIR /opt
 COPY scripts /opt/scripts

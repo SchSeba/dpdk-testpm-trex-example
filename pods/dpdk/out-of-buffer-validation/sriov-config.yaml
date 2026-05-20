@@ -1,0 +1,99 @@
+---
+apiVersion: performance.openshift.io/v2
+kind: PerformanceProfile
+metadata:
+  name: performance
+spec:
+  globallyDisableIrqLoadBalancing: true
+  cpu:
+    isolated: 21-51,73-103
+    reserved: 0-20,52-72
+  hugepages:
+    defaultHugepagesSize: 1G
+    pages:
+    - count: 32
+      size: 1G
+  numa:
+    topologyPolicy: "single-numa-node"
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkPoolConfig
+metadata:
+  name: worker
+  namespace: openshift-sriov-network-operator
+spec:
+  maxUnavailable: 1
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/worker-cnf: ""
+  rdmaMode: exclusive
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-1
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.1.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-1"}'
+  metaPlugins: |
+    {
+      "type": "rdma"
+    }
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: dpdk-network-2
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: '{"type": "host-local","ranges": [[{"subnet": "10.0.2.0/24"}]],"dataDir":
+    "/run/my-orchestrator/container-ipam-state-2"}'
+  metaPlugins: |
+    {
+      "type": "rdma"
+    }
+  networkNamespace: seba
+  spoofChk: "on"
+  trust: "on"
+  resourceName: dpdk_nic_2
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: dpdk-nic-1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  linkType: eth
+  isRdma: true
+  nicSelector:
+    pfNames: ["ens2f0np0"]
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+  numVfs: 1
+  priority: 99
+  resourceName: dpdk_nic_1
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: dpdk-nic-2
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  linkType: eth
+  isRdma: true
+  nicSelector:
+    pfNames: ["ens2f1np1"]
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
+  numVfs: 1
+  priority: 99
+  resourceName: dpdk_nic_2

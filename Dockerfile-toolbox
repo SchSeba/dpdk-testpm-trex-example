@@ -1,6 +1,24 @@
-FROM quay.io/fedora/fedora:rawhide
+FROM quay.io/centos/centos:stream9
 
-RUN dnf update -y && dnf install -y bpftrace iputils htop net-tools tcpdump iproute bind-utils bridge-utils procps-ng strace iperf3 perf && dnf clean all
+RUN dnf install -y dnf-plugins-core \
+    && dnf config-manager --set-enabled crb \
+    && dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf install -y --nodocs \
+        bind-utils \
+        bpftrace \
+        catatonit \
+        htop \
+        iperf3 \
+        iproute \
+        iputils \
+        libcap \
+        net-tools \
+        perf \
+        procps-ng \
+        strace \
+        tcpdump \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
 
 RUN setcap CAP_NET_ADMIN,CAP_NET_RAW=+ep /usr/sbin/ip \
     && setcap CAP_NET_ADMIN=+ep /usr/sbin/route

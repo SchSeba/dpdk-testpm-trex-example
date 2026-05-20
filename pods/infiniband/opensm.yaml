@@ -1,0 +1,138 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: opensm
+  namespace: seba
+  labels:
+    app: opensm
+spec:
+  hostNetwork: true
+  hostPID: true
+  nodeSelector:
+    kubernetes.io/hostname: cnfdd8.t5g-dev.eng.rdu2.dc.redhat.com
+  containers:
+    - name: opensm
+      image: quay.io/centos/centos:stream9
+      env:
+        # Configure your IB interface name here
+        - name: IB_INTERFACE
+          value: "ibs4f0"
+      command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+
+          echo "=== Discovering PF GUID from interface: $IB_INTERFACE ==="
+
+          # Find the RDMA device name from the network interface
+          if [ -d "/sys/class/net/${IB_INTERFACE}/device/infiniband" ]; then
+            RDMA_DEV=$(ls /sys/class/net/${IB_INTERFACE}/device/infiniband/ | head -1)
+            echo "Found RDMA device: $RDMA_DEV"
+          else
+            echo "ERROR: Cannot find RDMA device for interface $IB_INTERFACE"
+            echo "Available IB interfaces:"
+            ls /sys/class/net/ | grep -E "^ib|^ibs" || echo "None found"
+            exit 1
+          fi
+
+          # Get the node GUID from the RDMA device
+          GUID_RAW=$(cat /sys/class/infiniband/${RDMA_DEV}/node_guid)
+          # Convert GUID format from xx:xx:xx:xx:xx:xx:xx:xx to 0xXXXXXXXXXXXXXXXX
+          PF_GUID="0x$(echo $GUID_RAW | tr -d ':')"
+          echo "PF GUID: $PF_GUID"
+
+          echo ""
+          echo "=== Setting up MLNX_OFED repository ==="
+          cat > /etc/yum.repos.d/mlnx_ofed.repo << 'EOF'
+          [mlnx_ofed]
+          name=MLNX_OFED Repository
+          baseurl=https://linux.mellanox.com/public/repo/mlnx_ofed/latest/rhel9.4/x86_64/
+          enabled=1
+          gpgcheck=0
+          EOF
+
+          echo "=== Installing MLNX_OFED OpenSM ==="
+          dnf install -y opensm infiniband-diags libibverbs-utils 2>&1
+
+          echo ""
+          echo "=== Installed OpenSM version ==="
+          rpm -q opensm 2>&1
+          opensm --version 2>&1 || true
+
+          echo ""
+          echo "=== Copy ConfigMap config files to /etc/opensm ==="
+          cp /opensm-config/opensm.conf /etc/opensm/opensm.conf 2>/dev/null || echo "Using default opensm.conf"
+          cp /opensm-config/partitions.conf /etc/opensm/partitions.conf 2>/dev/null || true
+
+          echo ""
+          echo "=== Final OpenSM config ==="
+          cat /etc/opensm/opensm.conf
+
+          echo ""
+          echo "=== Starting OpenSM on $IB_INTERFACE ($RDMA_DEV) with GUID $PF_GUID ==="
+          opensm -g $PF_GUID \
+                 -F /etc/opensm/opensm.conf \
+                 -P /etc/opensm/partitions.conf \
+                 --reassign_lids \
+                 -f stdout 2>&1 &
+          OPENSM_PID=$!
+          echo "OpenSM started with PID $OPENSM_PID"
+
+          sleep 15
+          while true; do
+            echo "--- SM Status $(date) ---"
+            sminfo -C $RDMA_DEV -P 1 2>/dev/null || echo "SM info not available"
+            echo ""
+            echo "PF port state ($RDMA_DEV):"
+            ibstat $RDMA_DEV 2>/dev/null | grep -A 5 "Port 1:" || true
+            echo ""
+            echo "Sample VF port states:"
+            # Find VF devices associated with this PF
+            for vf_net in /sys/class/net/${IB_INTERFACE}v*/device/infiniband/*; do
+              if [ -d "$vf_net" ]; then
+                VF_DEV=$(basename $vf_net)
+                STATE=$(cat /sys/class/infiniband/$VF_DEV/ports/1/state 2>/dev/null)
+                LID=$(cat /sys/class/infiniband/$VF_DEV/ports/1/lid 2>/dev/null)
+                echo "$VF_DEV: state=$STATE lid=$LID"
+              fi
+            done 2>/dev/null | head -5
+            sleep 60
+          done
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: dev
+          mountPath: /dev
+        - name: sys
+          mountPath: /sys
+        # Mount ConfigMap to a different path to avoid conflict with package install
+        - name: opensm-config
+          mountPath: /opensm-config
+        - name: rdma-config
+          mountPath: /etc/rdma
+      resources:
+        limits:
+          cpu: "1"
+          memory: 512Mi
+        requests:
+          cpu: "100m"
+          memory: 256Mi
+  volumes:
+    - name: dev
+      hostPath:
+        path: /dev
+        type: Directory
+    - name: sys
+      hostPath:
+        path: /sys
+    - name: opensm-config
+      configMap:
+        name: opensm-config
+    - name: rdma-config
+      hostPath:
+        path: /etc/rdma
+        type: DirectoryOrCreate
+  restartPolicy: Always
+  terminationGracePeriodSeconds: 5

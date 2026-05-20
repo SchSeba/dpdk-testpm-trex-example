@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-server
+  labels:
+    app: nginx-client-test
+    role: server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-client-test
+      role: server
+  template:
+    metadata:
+      labels:
+        app: nginx-client-test
+        role: server
+    spec:
+      terminationGracePeriodSeconds: 3
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - nginx-client-test
+                  - key: role
+                    operator: In
+                    values:
+                      - client
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: nginx
+          image: nginxinc/nginx-unprivileged:latest
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-server-svc
+spec:
+  selector:
+    app: nginx-client-test
+    role: server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-client
+  labels:
+    app: nginx-client-test
+    role: client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-client-test
+      role: client
+  template:
+    metadata:
+      labels:
+        app: nginx-client-test
+        role: client
+    spec:
+      terminationGracePeriodSeconds: 3
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - nginx-client-test
+                  - key: role
+                    operator: In
+                    values:
+                      - server
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: client
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do
+                echo "--- $(date) ---"
+                curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" --connect-timeout 1 --max-time 1 http://nginx-server-svc
+                sleep 0.5
+              done

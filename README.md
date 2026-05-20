@@ -99,7 +99,7 @@ under `quay.io/schseba/dpdk:latest`. But for best performance it's better to use
 registry `registry.redhat.io/openshift4/dpdk-base-rhel8:latest`
 
 ```bash
-build-dpdk
+make build-dpdk
 ```
 
 ## Run testpmd
