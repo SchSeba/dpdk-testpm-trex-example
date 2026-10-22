@@ -527,37 +527,47 @@
       changed_when: cleanup_result.rc == 0
       failed_when: false
 
+    - name: Install podman safe prune helper
+      copy:
+        dest: /usr/local/bin/podman-safe-prune.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          /usr/bin/podman ps -a --external --format json | /usr/bin/python3 -c '
+          import json
+          import sys
+
+          for container in json.load(sys.stdin):
+              image = container.get("Image") or ""
+              container_id = container.get("Id") or container.get("ID") or ""
+              if container_id and not image.startswith("docker.io/"):
+                  print(container_id)
+          ' | /usr/bin/xargs -r /usr/bin/podman rm -f 2>/dev/null || true
+          /usr/bin/podman system prune -f
+
     - name: Run podman system prune for root
-      command: /usr/bin/podman system prune -f --all
+      command: /usr/local/bin/podman-safe-prune.sh
       register: podman_prune
       changed_when: podman_prune.stdout is search('Total reclaimed space')
       failed_when: false
 
     - name: Run podman system prune for runner user
-      command: /usr/bin/podman system prune -f --all
+      command: /usr/local/bin/podman-safe-prune.sh
       become_user: "{{ runner_user }}"
       register: podman_prune_runner
       changed_when: podman_prune_runner.stdout is search('Total reclaimed space')
       failed_when: false
 
-    - name: Remove stale buildah containers for runner user
-      shell: |
-        /usr/bin/podman rm -f $(/usr/bin/podman ps -a --external -q) 2>/dev/null || true
-        /usr/bin/podman system prune -f --all
-      become_user: "{{ runner_user }}"
-      failed_when: false
-      changed_when: false
-
     - name: Create cron job for podman system prune (root)
       cron:
         name: "Podman system prune"
         special_time: "daily"
-        job: "/usr/bin/podman system prune -f --all"
+        job: "/usr/local/bin/podman-safe-prune.sh"
         user: root
 
     - name: Create cron job for podman system prune (runner user)
       cron:
         name: "Podman system prune for CI runner"
         special_time: "daily"
-        job: "/usr/bin/podman rm -f $(/usr/bin/podman ps -a --external -q) 2>/dev/null; /usr/bin/podman system prune -f --all"
+        job: "/usr/local/bin/podman-safe-prune.sh"
         user: "{{ runner_user }}"

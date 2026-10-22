@@ -10,6 +10,7 @@
     runner_base_dir: "/home/{{ runner_user }}/runners"
     runner_archive: "actions-runner-linux-x64-{{ runner_version }}.tar.gz"
     runner_download_url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/{{ runner_archive }}"
+    kcli_install_command: "curl -s https://raw.githubusercontent.com/karmab/kcli/main/install.sh | bash"
     
     # Configuration should be loaded from group_vars or passed as extra-vars
     # Example: ansible-playbook install-gh-runners.yaml -e @secrets.yml
@@ -59,6 +60,42 @@
         groups: libvirt
         append: yes
       tags: ['setup', 'users']
+
+    - name: Set libvirt image directory permissions
+      ansible.builtin.file:
+        path: /var/lib/libvirt/images
+        state: directory
+        owner: root
+        group: libvirt
+        mode: '0771'
+      tags: ['setup', 'libvirt']
+
+    - name: Allow github-runner to manage libvirt images
+      ansible.posix.acl:
+        path: /var/lib/libvirt/images
+        entity: github-runner
+        etype: user
+        permissions: rwx
+        state: present
+      tags: ['setup', 'libvirt']
+
+    - name: Make Ignition files readable by QEMU
+      ansible.posix.acl:
+        path: /var/lib/libvirt/images
+        default: true
+        entity: qemu
+        etype: user
+        permissions: r
+        state: present
+      tags: ['setup', 'libvirt']
+
+    - name: Apply the QEMU ACL to existing Ignition files
+      ansible.builtin.command:
+        cmd: >
+          find /var/lib/libvirt/images -maxdepth 1 -type f -name '*.ign'
+          -exec setfacl -m u:qemu:r-- {} +
+      changed_when: false
+      tags: ['setup', 'libvirt']
 
     - name: Create runner base directory
       file:
@@ -145,6 +182,12 @@
         mode: '0644'
       register: kcli_config_created
       tags: ['config']
+
+    - name: Install kcli
+      shell: "{{ kcli_install_command }}"
+      args:
+        executable: /bin/bash
+      tags: ['install']
 
     - name: Install kcli wrapper script to fix HOME issue
       copy:

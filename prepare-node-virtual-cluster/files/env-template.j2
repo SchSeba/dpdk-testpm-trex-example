@@ -7,3 +7,6 @@ GOCACHE=/home/github-runner/runners/{{item.name}}-{{uid}}/data/_temp/
 GOMODCACHE=/home/github-runner/runners/{{item.name}}-{{uid}}/data/_temp/
 HOME=/home/github-runner
 KCLI_CONFIG=/home/github-runner/.kcli/config.yml
+{% if 'dra-driver-sriov' in item.url %}
+NETWORK_NAME=dra-network
+{% endif %}
